@@ -1,5 +1,7 @@
 # Single Railway service: builds the static site and serves it together with /api.
-FROM node:24-alpine
+# Debian slim (glibc + system OpenSSL) rather than Alpine — Alpine's musl/OpenSSL
+# build trips the TLS handshake to MongoDB Atlas.
+FROM node:24-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
