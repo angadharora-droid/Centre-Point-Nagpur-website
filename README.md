@@ -1,12 +1,12 @@
 # Centre Point Nagpur
 
-A private copy of the Centre Point Hotel Nagpur website — 37 captured public pages
+A private copy of the Centre Point Hotel Nagpur website — 36 captured public pages
 with their original layout, images, fonts and colours. One Railway service builds
 the static site and serves it together with a small JSON API from the same origin.
 
 ## What is and isn't included
 
-- All 37 public pages, original presentation assets, Swiftbook booking links and
+- All 36 public pages, original presentation assets, Swiftbook booking links and
   the homepage booking widget.
 - A working **event-enquiry form**: the captured WPForms form on the banquet /
   event pages submits to `POST /api/enquiries` and stores each enquiry in MongoDB.
@@ -58,7 +58,7 @@ leaving the body, inline styles, fonts and stylesheet links untouched. It sets a
 unique title and description per page, a canonical link, Open Graph / Twitter
 tags, and JSON-LD (`WebSite` + `WebPage` everywhere, `Hotel` on the home page,
 `BreadcrumbList` elsewhere), and writes `dist/sitemap.xml` and `dist/robots.txt`.
-The 35 content pages are indexable when `PUBLIC_SITE_URL` is set; two low-value
+The 34 content pages are indexable when `PUBLIC_SITE_URL` is set; two low-value
 pages carried over from the original stay `noindex`.
 
 ## Local development

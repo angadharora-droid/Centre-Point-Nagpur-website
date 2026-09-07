@@ -41,8 +41,8 @@ test('SEO preserves every page body, inline style and original stylesheet refere
     }
   }
   await walk('site');
-  assert.equal(pages, 37);
-  assert.equal(indexed, 35);
+  assert.equal(pages, 36);
+  assert.equal(indexed, 34);
 });
 
 test('production domain validation and preview indexing', () => {

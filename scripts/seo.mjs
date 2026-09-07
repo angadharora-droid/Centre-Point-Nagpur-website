@@ -36,7 +36,6 @@ const labels = {
   '/steam-room/': 'Steam Room',
   '/studio-rooms/': 'Studio Rooms & Meetings',
   '/terms-cancellation-policy/': 'Terms & Cancellation Policy',
-  '/unpulgged/': 'Unplugged',
   '/why-choose-hotel-centre-point-for-your-stay-in-nagpur/': 'Planning Your Stay in Nagpur',
 };
 const descriptions = {
