@@ -1,0 +1,97 @@
+{
+  "source": "https://centrepointnagpur.com",
+  "pages": [
+    "https://centrepointnagpur.com/",
+    "https://centrepointnagpur.com/accommodation/club-room",
+    "https://centrepointnagpur.com/accommodation/cp-suite/",
+    "https://centrepointnagpur.com/accommodation/deluxe-suite/",
+    "https://centrepointnagpur.com/accommodation/executive-rooms/",
+    "https://centrepointnagpur.com/accommodation/premium-rooms/",
+    "https://centrepointnagpur.com/accommodation/super-club/",
+    "https://centrepointnagpur.com/amenities/",
+    "https://centrepointnagpur.com/banquet-hall/",
+    "https://centrepointnagpur.com/board-room/",
+    "https://centrepointnagpur.com/bougainvillea/",
+    "https://centrepointnagpur.com/contact-us/",
+    "https://centrepointnagpur.com/dining-in-nagpur-explore-the-best-restaurants-at-hotel-centre-point/",
+    "https://centrepointnagpur.com/foints/",
+    "https://centrepointnagpur.com/freakk-de-bistro/",
+    "https://centrepointnagpur.com/golden-chamber/",
+    "https://centrepointnagpur.com/grand-millennium/",
+    "https://centrepointnagpur.com/gym/",
+    "https://centrepointnagpur.com/high-steaks-rooftop/",
+    "https://centrepointnagpur.com/hotel-gallery/",
+    "https://centrepointnagpur.com/luxurious-amenities-at-hotel-centre-point-nagpur/",
+    "https://centrepointnagpur.com/meeting-point/",
+    "https://centrepointnagpur.com/millennium/",
+    "https://centrepointnagpur.com/palacio-2/",
+    "https://centrepointnagpur.com/privacy-policy-2/",
+    "https://centrepointnagpur.com/sammelan/",
+    "https://centrepointnagpur.com/sapphire/",
+    "https://centrepointnagpur.com/silver-chamber/",
+    "https://centrepointnagpur.com/spa-gym/",
+    "https://centrepointnagpur.com/steam-room/",
+    "https://centrepointnagpur.com/studio-rooms/",
+    "https://centrepointnagpur.com/terms-cancellation-policy/",
+    "https://centrepointnagpur.com/unpulgged/",
+    "https://centrepointnagpur.com/why-choose-hotel-centre-point-for-your-stay-in-nagpur/",
+    "https://centrepointnagpur.com/hello-world/",
+    "https://centrepointnagpur.com/our-rooms/",
+    "https://centrepointnagpur.com/roulette-with-bonus-free-spins-a-complete-guide/"
+  ],
+  "assets": 883,
+  "failures": [
+    {
+      "url": "https://centrepointnagpur.com/wp-content/themes/hoteller/fonts/hkgrotesk-medium-webfont.woff",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+J.slides[t].data.thumbnail+",
+      "error": "curl: (3) bad range in URL position 101:\nhttps://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+J.slides[t].data.thumbnail+\n                                                                                                    ^\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+t.mediaSettings.poster+",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+i.mediaProperties.poster+",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+J.o.globalBGImage+",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/hoteller-elementor/assets/css/owl.video.play.png",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/hoteller-elementor/assets/js/${self.image.src}",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/wpforms/assets/pro/css/fields/img/flags@2x.png",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/wpforms/assets/pro/css/fields/img/flags.png",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/pt-content-views-pro/public/assets/js/e,e.indexOf(",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/wpforms/assets/pro/css/fields/img/globe.png",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/LayerSlider/assets/static/layerslider/js/+a.styleSettings.overlay+",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    },
+    {
+      "url": "https://centrepointnagpur.com/wp-content/plugins/wpforms/assets/pro/css/fields/img/globe@2x.png",
+      "error": "curl: (56) The requested URL returned error: 404\n"
+    }
+  ]
+}
