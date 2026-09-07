@@ -46,20 +46,22 @@ const descriptions = {
   '/privacy-policy-2/': 'Read the privacy policy for Centre Point Hotel Nagpur, including information about how personal information is handled.',
   '/terms-cancellation-policy/': 'Read the terms and cancellation policy for Centre Point Hotel Nagpur before planning your stay or making a reservation.',
 };
+// The live domain. PUBLIC_SITE_URL overrides it (e.g. a staging host).
+const DEFAULT_ORIGIN = 'https://centrepointnagpur.com';
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const attributes = tag => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*(["'])(.*?)\2/gs)].map(m => [m[1].toLowerCase(), m[3]]));
 
 export function seoSettings(env = process.env) {
-  const raw = env.PUBLIC_SITE_URL?.trim() || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : '');
-  let origin = '';
-  if (raw) {
-    const url = new URL(raw);
+  const override = env.PUBLIC_SITE_URL?.trim() || (env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}` : '');
+  let origin = DEFAULT_ORIGIN;
+  if (override) {
+    const url = new URL(override);
     if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('PUBLIC_SITE_URL must be an HTTPS origin without a path, credentials or query string');
     origin = url.origin;
   }
   const railwayEnv = env.RAILWAY_ENVIRONMENT_NAME?.trim();
   const production = (!env.VERCEL_ENV || env.VERCEL_ENV === 'production') && (!railwayEnv || railwayEnv === 'production');
-  return { origin, indexable: Boolean(origin) && production };
+  return { origin, indexable: production };
 }
 
 export function optimizePage(html, route, settings) {

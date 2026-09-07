@@ -20,25 +20,25 @@ the static site and serves it together with a small JSON API from the same origi
    `railway.json` selects the `Dockerfile` build and `npm start`.
 2. Generate a public domain for the service.
 3. Set service variables:
-   - `PUBLIC_SITE_URL` — the public HTTPS origin you just generated, e.g.
-     `https://centre-point-nagpur.up.railway.app` (or a custom domain). Origin
-     only: no path, query or trailing slash. Required for SEO indexing, canonical
-     links and the sitemap; without it every page builds `noindex`.
    - `MONGODB_URI` — your MongoDB connection string. Without it the site still
      runs and the enquiry form tells visitors submissions are unavailable.
+     (Allow-list `0.0.0.0/0` in MongoDB Atlas → Network Access — Railway egress
+     IPs are not static.)
    - `MONGODB_DB` — database name (defaults to `centrepoint`).
    - `ADMIN_TOKEN` — a long random string; required as `Authorization: Bearer …`
      to read `GET /api/enquiries`.
+   - `PUBLIC_SITE_URL` — optional. SEO defaults to `https://centrepointnagpur.com`;
+     set this only to point canonical links / the sitemap at a different host.
    - `PUBLIC_API_BASE_URL`, `FRONTEND_ORIGINS` — leave unset. The frontend calls
      `/api` on its own origin.
-4. Deploy. The container runs `scripts/build.mjs` on start (so `PUBLIC_SITE_URL`
-   takes effect), then serves `dist/` and `/api` on Railway's `$PORT`.
+4. Deploy. The container runs `scripts/build.mjs` on start, then serves `dist/`
+   and `/api` on Railway's `$PORT`.
 5. Check `https://YOUR-DOMAIN/api/health` →
    `{"status":"ok","service":"centrepoint-api","db":{"configured":true,"connected":true}}`.
    Railway's health check already polls this path.
 
 On a Railway preview/PR environment (`RAILWAY_ENVIRONMENT_NAME` not `production`)
-pages stay `noindex` even when `PUBLIC_SITE_URL` is set.
+pages build `noindex` automatically.
 
 ## API
 
@@ -71,8 +71,10 @@ leaving the body, inline styles, fonts and stylesheet links untouched. It sets a
 unique title and description per page, a canonical link, Open Graph / Twitter
 tags, and JSON-LD (`WebSite` + `WebPage` everywhere, `Hotel` on the home page,
 `BreadcrumbList` elsewhere), and writes `dist/sitemap.xml` and `dist/robots.txt`.
-The 34 content pages are indexable when `PUBLIC_SITE_URL` is set; two low-value
-pages carried over from the original stay `noindex`.
+The 34 content pages are indexable (canonical host `https://centrepointnagpur.com`,
+override with `PUBLIC_SITE_URL`); two low-value pages carried over from the
+original stay `noindex`. `robots.txt` links the sitemap. On a non-production
+Railway/Vercel environment every page builds `noindex`.
 
 ## Local development
 
