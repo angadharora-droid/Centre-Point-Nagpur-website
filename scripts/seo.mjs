@@ -58,7 +58,9 @@ export function seoSettings(env = process.env) {
     if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('PUBLIC_SITE_URL must be an HTTPS origin without a path, credentials or query string');
     origin = url.origin;
   }
-  return { origin, indexable: Boolean(origin) && (!env.VERCEL_ENV || env.VERCEL_ENV === 'production') };
+  const railwayEnv = env.RAILWAY_ENVIRONMENT_NAME?.trim();
+  const production = (!env.VERCEL_ENV || env.VERCEL_ENV === 'production') && (!railwayEnv || railwayEnv === 'production');
+  return { origin, indexable: Boolean(origin) && production };
 }
 
 export function optimizePage(html, route, settings) {
@@ -129,7 +131,7 @@ export async function applySeo(directory, env = process.env) {
     }
   }
   await walk(directory);
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.sort().map(url => `  <url><loc>${escape(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.sort((a, b) => a.localeCompare(b)).map(url => `  <url><loc>${escape(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
   await writeFile(path.join(directory, 'sitemap.xml'), sitemap);
   // Permit crawling so crawlers can read noindex on preview and excluded pages.
   await writeFile(path.join(directory, 'robots.txt'), `User-agent: *\nAllow: /\n${settings.indexable ? `Sitemap: ${settings.origin}/sitemap.xml\n` : ''}`);

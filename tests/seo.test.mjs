@@ -49,6 +49,8 @@ test('production domain validation and preview indexing', () => {
   assert.equal(seoSettings({}).indexable, false);
   assert.equal(seoSettings({ PUBLIC_SITE_URL: 'https://hotel.example', VERCEL_ENV: 'preview' }).indexable, false);
   assert.equal(seoSettings({ VERCEL_PROJECT_PRODUCTION_URL: 'hotel.vercel.app', VERCEL_ENV: 'production' }).origin, 'https://hotel.vercel.app');
+  assert.equal(seoSettings({ PUBLIC_SITE_URL: 'https://hotel.example', RAILWAY_ENVIRONMENT_NAME: 'production' }).indexable, true);
+  assert.equal(seoSettings({ PUBLIC_SITE_URL: 'https://hotel.example', RAILWAY_ENVIRONMENT_NAME: 'pr-42' }).indexable, false);
   for (const value of ['http://hotel.example','https://hotel.example/path','https://secret@hotel.example','https://hotel.example/?q=1']) {
     assert.throws(() => seoSettings({ PUBLIC_SITE_URL: value }));
   }

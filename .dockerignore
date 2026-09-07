@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.env*
+!.env.example
+*.md
+tests
+app
+components
+hooks
+lib
+public
+next.config.ts
+vite.config.ts
+tsconfig.json
+components.json
+package-lock.json

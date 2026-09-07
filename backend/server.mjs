@@ -1,15 +1,18 @@
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 
-export function createServer({ origins = process.env.FRONTEND_ORIGINS || '' } = {}) {
+// Request listener for the JSON API. Mounted under /api by the site server, and
+// also usable on its own through createServer() below.
+export function apiListener({ origins = process.env.FRONTEND_ORIGINS || '' } = {}) {
   const allowed = new Set(origins.split(',').map(value => value.trim()).filter(Boolean));
-  return http.createServer((req, res) => {
+  return (req, res) => {
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Vary', 'Origin');
     const send = (status, body) => { res.writeHead(status); res.end(JSON.stringify(body)); };
     const origin = req.headers.origin;
+    // Same-origin requests send no Origin header; a cross-origin caller must be allow-listed.
     if (origin && !allowed.has(origin)) return send(403, { error: 'Origin not allowed' });
     if (origin) res.setHeader('Access-Control-Allow-Origin', origin);
     if (req.method === 'OPTIONS') {
@@ -23,7 +26,11 @@ export function createServer({ origins = process.env.FRONTEND_ORIGINS || '' } = 
     const pathname = new URL(req.url, 'http://localhost').pathname;
     if (pathname === '/api/health') return send(200, { status: 'ok', service: 'centrepoint-api' });
     return send(404, { error: 'Endpoint not found' });
-  });
+  };
+}
+
+export function createServer(options) {
+  return http.createServer(apiListener(options));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -3,6 +3,9 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 const report = JSON.parse(await readFile('mirror-report.json', 'utf8'));
 if (!report.pages.length) throw new Error('No captured pages');
+// The site and API are served from one Railway service, so the frontend calls /api
+// on its own origin by default. PUBLIC_API_BASE_URL only needs setting if the API is
+// ever split onto a separate origin.
 const rawOrigin = process.env.PUBLIC_API_BASE_URL?.trim() || '';
 let apiBaseUrl = '';
 if (rawOrigin) {
@@ -19,8 +22,7 @@ await cp('site', 'dist', { recursive: true });
 await writeFile('dist/runtime-config.js', `window.CENTREPOINT_CONFIG = Object.freeze(${JSON.stringify({ apiBaseUrl })});\n`);
 await writeFile('dist/api-client.js', `window.centrePointApi = Object.freeze({
   async health() {
-    const base = window.CENTREPOINT_CONFIG.apiBaseUrl;
-    if (!base) throw new Error('Backend is not configured. Set PUBLIC_API_BASE_URL and rebuild.');
+    const base = window.CENTREPOINT_CONFIG.apiBaseUrl || '';
     const response = await fetch(base + '/api/health', { signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error('Backend returned ' + response.status);
     return response.json();
@@ -49,4 +51,4 @@ async function connectPages(directory) {
 }
 await connectPages('dist');
 await applySeo('dist');
-console.log(`Built ${report.pages.length} pages. Railway API ${apiBaseUrl ? 'configured' : 'not configured (static pages work independently)'}.`);
+console.log(`Built ${report.pages.length} pages. API origin: ${apiBaseUrl || 'same origin (/api)'}.`);
