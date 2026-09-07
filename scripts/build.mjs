@@ -43,13 +43,36 @@ function localizeLinks(html) {
     .replaceAll(`action="${sourceOrigin}/`, 'action="/')
     .replaceAll(`action="${sourceOrigin}"`, 'action="/"');
 }
+
+// Defer offscreen images. The first few <img> on a page (logo, hero) load eagerly;
+// everything without an explicit loading= after that becomes lazy.
+function lazyLoadImages(html) {
+  let seen = 0;
+  return html.replace(/<img\b[^>]*>/gi, tag => {
+    seen += 1;
+    if (/\bloading\s*=/.test(tag)) return tag;
+    const decoding = /\bdecoding\s*=/.test(tag) ? '' : ' decoding="async"';
+    if (seen <= 3) return tag.replace(/<img\b/i, `<img${decoding} loading="eager"`);
+    return tag.replace(/<img\b/i, `<img${decoding} loading="lazy"`);
+  });
+}
+
+const HEAD_ADDITIONS = [
+  '<link rel="preconnect" href="https://fonts.googleapis.com">',
+  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+  '<script defer src="/runtime-config.js"></script>',
+  '<script defer src="/api-client.js"></script>',
+  '<script defer src="/forms.js"></script>',
+].join('');
+
 async function connectPages(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      await writeFile(file, localizeLinks(html).replace('</head>', '<script defer src="/runtime-config.js"></script><script defer src="/api-client.js"></script><script defer src="/forms.js"></script></head>'));
+      const out = lazyLoadImages(localizeLinks(html)).replace('</head>', `${HEAD_ADDITIONS}</head>`);
+      await writeFile(file, out);
     }
   }
 }

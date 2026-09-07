@@ -2,9 +2,30 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import zlib from 'node:zlib';
+import { promisify } from 'node:util';
 import { getDb, isConfigured, dbHealth, closeDb } from './db.mjs';
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.mp4': 'video/mp4', '.gif': 'image/gif', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
+const brotli = promisify(zlib.brotliCompress);
+const gzip = promisify(zlib.gzip);
+
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript', '.mjs': 'application/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.gif': 'image/gif', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
+const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.xml', '.txt', '.ttf']);
+const IMMUTABLE = /\.(css|js|mjs|woff2?|ttf|eot|otf|jpe?g|png|webp|avif|gif|svg|ico|mp4|webm)$/i;
+const NEVER_CACHE = new Set(['/runtime-config.js', '/api-client.js', '/forms.js']);
+
+// Cache compressed copies of text assets, keyed by path + mtime + encoding.
+const encodedCache = new Map();
+async function encodeBody(key, raw, encoding) {
+  const hit = encodedCache.get(key);
+  if (hit) return hit;
+  const out = encoding === 'br'
+    ? await brotli(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6, [zlib.constants.BROTLI_PARAM_SIZE_HINT]: raw.length } })
+    : await gzip(raw, { level: 6 });
+  if (encodedCache.size > 400) encodedCache.clear();
+  encodedCache.set(key, out);
+  return out;
+}
 
 // Reference: form 4592 offers event types Wedding / Corporate Event / Socail
 // Gathering / Other and meals Breakfast / Lunch / Hitea / Dinner / All Day Session.
@@ -113,14 +134,41 @@ async function handleApi(req, res, pathname, config) {
   return json(res, 404, { error: 'Endpoint not found' });
 }
 
-async function serveStatic(res, root, pathname) {
+function pickEncoding(accept = '') {
+  if (/\bbr\b/.test(accept)) return 'br';
+  if (/\bgzip\b/.test(accept)) return 'gzip';
+  return null;
+}
+
+async function serveStatic(req, res, root, pathname) {
   try {
     let file = path.resolve(root, '.' + decodeURIComponent(pathname));
     if (!file.startsWith(root + path.sep) && file !== root) throw new Error('outside root');
-    if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
-    const body = await readFile(file);
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
-    res.end(body);
+    let info = await stat(file);
+    if (info.isDirectory()) { file = path.join(file, 'index.html'); info = await stat(file); }
+
+    const ext = path.extname(file).toLowerCase();
+    const isHtml = ext === '.html';
+    const route = file.slice(root.length).split(path.sep).join('/');
+    const etag = `"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
+
+    const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ETag: etag, Vary: 'Accept-Encoding' };
+    if (isHtml) headers['Cache-Control'] = 'no-cache';
+    else if (NEVER_CACHE.has(route)) headers['Cache-Control'] = 'no-cache';
+    else if (IMMUTABLE.test(ext)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+    else headers['Cache-Control'] = 'public, max-age=3600';
+
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
+
+    let body = await readFile(file);
+    const encoding = COMPRESSIBLE.has(ext) && body.length > 512 ? pickEncoding(req.headers['accept-encoding']) : null;
+    if (encoding) {
+      body = await encodeBody(`${file}:${info.mtimeMs}:${encoding}`, body, encoding);
+      headers['Content-Encoding'] = encoding;
+    }
+    headers['Content-Length'] = body.length;
+    res.writeHead(200, headers);
+    res.end(req.method === 'HEAD' ? undefined : body);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end('<h1>Page not found</h1><a href="/">Return home</a>');
@@ -145,7 +193,7 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
         return res.end();
       }
     }
-    return serveStatic(res, root, pathname);
+    return serveStatic(req, res, root, pathname);
   });
 }
 

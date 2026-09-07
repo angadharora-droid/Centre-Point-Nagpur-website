@@ -51,6 +51,19 @@ pages stay `noindex` even when `PUBLIC_SITE_URL` is set.
 Enquiries are stored in the `enquiries` collection with `status: "new"`, a
 timestamp, and the submitter's user agent and IP.
 
+## Performance
+
+- The server brotli/gzip-compresses HTML, CSS, JS and SVG on the fly (compressed
+  copies are cached in memory) and sends `ETag` + `304` for revalidation.
+- Static assets (`/wp-content/…`, fonts, CSS, JS, images) are served
+  `Cache-Control: immutable` for a year; HTML is `no-cache` (revalidated).
+- `scripts/build.mjs` marks offscreen images `loading="lazy"` and adds
+  `preconnect` hints for Google Fonts.
+- `scripts/optimize-images.mjs` is a one-time macOS (`sips`) tool that recompressed
+  the captured images: JPEGs re-encoded at q80 / max 2000px, large photo PNGs
+  converted to JPEG with every reference rewritten. It cut `site/` from ~169 MB to
+  ~126 MB. Re-run it only if new large images are added to `site/`.
+
 ## SEO
 
 `scripts/seo.mjs` (run from `scripts/build.mjs`) rewrites each page head while
@@ -89,7 +102,8 @@ npm run build
 | `site/` | The original capture. Never rewritten by the build. |
 | `scripts/build.mjs` | Copies `site/` → `dist/`, localises on-site links, injects the API client and `forms.js`, applies SEO. |
 | `scripts/assets/forms.js` | Progressive enhancement that submits the WPForms enquiry form as JSON. |
-| `backend/server.mjs` | The one server: static files from `dist/` (or `site/`) plus `/api/*`. |
+| `backend/server.mjs` | The one server: compressed, cached static files from `dist/` (or `site/`) plus `/api/*`. |
+| `scripts/optimize-images.mjs` | One-time image-shrinking maintenance tool (macOS `sips`). |
 | `backend/db.mjs` | Lazy, reused MongoDB connection. |
 | `Dockerfile`, `railway.json` | Railway build and run configuration. |
 | `dist/` | Generated output. Not committed. |

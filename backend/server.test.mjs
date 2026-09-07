@@ -23,6 +23,28 @@ test('serves static files and 404s unknown paths', async t => {
   assert.equal((await fetch(`${base}/../../etc/passwd`)).status, 404);
 });
 
+test('static responses compress and carry caching headers', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'cp-cache-'));
+  await writeFile(path.join(root, 'index.html'), '<!doctype html><title>Home</title>' + ' padding'.repeat(200));
+  await writeFile(path.join(root, 'app.css'), 'body{color:red}'.repeat(100));
+  const server = createSiteServer({ staticDir: root });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  const html = await fetch(`${base}/`, { headers: { 'Accept-Encoding': 'br' } });
+  assert.equal(html.headers.get('content-encoding'), 'br');
+  assert.equal(html.headers.get('cache-control'), 'no-cache');
+  const etag = html.headers.get('etag');
+  assert.ok(etag);
+  const revalidated = await fetch(`${base}/`, { headers: { 'If-None-Match': etag } });
+  assert.equal(revalidated.status, 304);
+
+  const css = await fetch(`${base}/app.css`, { headers: { 'Accept-Encoding': 'gzip' } });
+  assert.equal(css.headers.get('content-encoding'), 'gzip');
+  assert.match(css.headers.get('cache-control'), /immutable/);
+});
+
 test('health reports db state; storage is unconfigured without MONGODB_URI', async t => {
   const base = await start(t);
   const health = await (await fetch(`${base}/api/health`)).json();
