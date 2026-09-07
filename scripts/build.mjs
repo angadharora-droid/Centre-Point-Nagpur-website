@@ -1,6 +1,9 @@
 import { applySeo } from './seo.mjs';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 const report = JSON.parse(await readFile('mirror-report.json', 'utf8'));
 if (!report.pages.length) throw new Error('No captured pages');
 // The site and API are served from one Railway service, so the frontend calls /api
@@ -28,6 +31,7 @@ await writeFile('dist/api-client.js', `window.centrePointApi = Object.freeze({
     return response.json();
   }
 });\n`);
+await cp(path.join(here, 'assets', 'forms.js'), 'dist/forms.js');
 // Rewrite on-site links so navigation (logo, menus, footer) stays within this copy
 // instead of jumping to the live original site. The captured pages in site/ keep the
 // absolute URLs; only the built output in dist/ is localised.
@@ -45,7 +49,7 @@ async function connectPages(directory) {
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      await writeFile(file, localizeLinks(html).replace('</head>', '<script defer src="/runtime-config.js"></script><script defer src="/api-client.js"></script></head>'));
+      await writeFile(file, localizeLinks(html).replace('</head>', '<script defer src="/runtime-config.js"></script><script defer src="/api-client.js"></script><script defer src="/forms.js"></script></head>'));
     }
   }
 }

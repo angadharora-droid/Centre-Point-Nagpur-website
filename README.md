@@ -8,9 +8,11 @@ the static site and serves it together with a small JSON API from the same origi
 
 - All 37 public pages, original presentation assets, Swiftbook booking links and
   the homepage booking widget.
-- `GET /api/health` only. No database, enquiry, admin, payment or booking
-  endpoints yet; the copied WordPress forms are not wired to it.
-- WordPress admin and one large external video are not reproduced.
+- A working **event-enquiry form**: the captured WPForms form on the banquet /
+  event pages submits to `POST /api/enquiries` and stores each enquiry in MongoDB.
+- `GET /api/health` and an admin-only `GET /api/enquiries` reader.
+- No payment or room-booking endpoints (rooms book through Swiftbook). WordPress
+  admin and one large external video are not reproduced.
 
 ## Deploy to Railway
 
@@ -22,16 +24,32 @@ the static site and serves it together with a small JSON API from the same origi
      `https://centre-point-nagpur.up.railway.app` (or a custom domain). Origin
      only: no path, query or trailing slash. Required for SEO indexing, canonical
      links and the sitemap; without it every page builds `noindex`.
-   - `PUBLIC_API_BASE_URL` — leave unset. The frontend calls `/api` on its own
-     origin.
-   - `FRONTEND_ORIGINS` — leave unset unless another origin must call the API.
-4. Deploy. The container runs `scripts/build.mjs` on start (so the variables above
-   take effect), then serves `dist/` and `/api` on Railway's `$PORT`.
-5. Check `https://YOUR-DOMAIN/api/health` → `{"status":"ok","service":"centrepoint-api"}`.
+   - `MONGODB_URI` — your MongoDB connection string. Without it the site still
+     runs and the enquiry form tells visitors submissions are unavailable.
+   - `MONGODB_DB` — database name (defaults to `centrepoint`).
+   - `ADMIN_TOKEN` — a long random string; required as `Authorization: Bearer …`
+     to read `GET /api/enquiries`.
+   - `PUBLIC_API_BASE_URL`, `FRONTEND_ORIGINS` — leave unset. The frontend calls
+     `/api` on its own origin.
+4. Deploy. The container runs `scripts/build.mjs` on start (so `PUBLIC_SITE_URL`
+   takes effect), then serves `dist/` and `/api` on Railway's `$PORT`.
+5. Check `https://YOUR-DOMAIN/api/health` →
+   `{"status":"ok","service":"centrepoint-api","db":{"configured":true,"connected":true}}`.
    Railway's health check already polls this path.
 
 On a Railway preview/PR environment (`RAILWAY_ENVIRONMENT_NAME` not `production`)
 pages stay `noindex` even when `PUBLIC_SITE_URL` is set.
+
+## API
+
+| Method & path | Purpose |
+| --- | --- |
+| `GET /api/health` | Service status and MongoDB connectivity. |
+| `POST /api/enquiries` | Submit an event enquiry (JSON). Validates name, email, phone, event type, date, guests and meals; a filled `company` field is treated as spam and silently dropped. |
+| `GET /api/enquiries?limit=50` | List recent enquiries, newest first. Requires `Authorization: Bearer $ADMIN_TOKEN`. |
+
+Enquiries are stored in the `enquiries` collection with `status: "new"`, a
+timestamp, and the submitter's user agent and IP.
 
 ## SEO
 
@@ -45,23 +63,21 @@ pages carried over from the original stay `noindex`.
 
 ## Local development
 
-Serve the raw capture in `site/` plus the API:
-
 ```sh
-npm run dev            # http://127.0.0.1:5173
+cd backend && npm install && cd ..     # once: installs the mongodb driver
+cp .env.example .env                    # then fill in MONGODB_URI / ADMIN_TOKEN
 ```
 
-Serve the production build exactly as Railway does:
-
 ```sh
-PUBLIC_SITE_URL=https://example.up.railway.app npm start
+npm run dev                             # serves site/ + /api on :5173
+node --env-file=.env backend/server.mjs --dist   # serves the built dist/ like Railway
 ```
 
 Validate:
 
 ```sh
 npm test               # SEO transform preserves every page's presentation
-npm run test:backend   # API health, CORS allow-list, method handling
+npm run test:backend   # static serving, health, CORS, enquiry validation, admin auth
 python3 scripts/verify.py
 npm run build
 ```
@@ -71,9 +87,10 @@ npm run build
 | Path | Purpose |
 | --- | --- |
 | `site/` | The original capture. Never rewritten by the build. |
-| `scripts/build.mjs` | Copies `site/` → `dist/`, localises on-site links, injects the API client, applies SEO. |
-| `scripts/serve.mjs` | One server: static files + `/api/*` (`--dist` serves the build). |
-| `backend/server.mjs` | The API request listener, mounted by `serve.mjs` and runnable standalone. |
+| `scripts/build.mjs` | Copies `site/` → `dist/`, localises on-site links, injects the API client and `forms.js`, applies SEO. |
+| `scripts/assets/forms.js` | Progressive enhancement that submits the WPForms enquiry form as JSON. |
+| `backend/server.mjs` | The one server: static files from `dist/` (or `site/`) plus `/api/*`. |
+| `backend/db.mjs` | Lazy, reused MongoDB connection. |
 | `Dockerfile`, `railway.json` | Railway build and run configuration. |
 | `dist/` | Generated output. Not committed. |
 

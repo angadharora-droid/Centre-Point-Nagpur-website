@@ -6,10 +6,10 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "node scripts/serve.mjs",
+    "dev": "node backend/server.mjs",
     "build": "node scripts/build.mjs",
     "prestart": "node scripts/build.mjs",
-    "start": "node scripts/serve.mjs --dist",
+    "start": "node backend/server.mjs --dist",
     "test": "node --test 'tests/**/*.test.mjs'",
     "lint": "oxlint",
     "format": "oxfmt",
