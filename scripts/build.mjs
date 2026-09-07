@@ -49,16 +49,20 @@ function localizeLinks(html) {
     .replaceAll(`'${sourceOrigin}/`, "'/");
 }
 
-// Defer offscreen images. The first few <img> on a page (logo, hero) load eagerly;
-// everything without an explicit loading= after that becomes lazy.
+// Only the first sizeable image on a page (the LCP candidate) loads eagerly;
+// every other image — including slider slides the theme marked eager — is lazied.
+const TINY_IMG = /\b(?:mobile-icon|icon|logo|Untitled-298|favicon|spinner|loader)\b/i;
 function lazyLoadImages(html) {
-  let seen = 0;
+  let lcpDone = false;
   return html.replace(/<img\b[^>]*>/gi, tag => {
-    seen += 1;
-    if (/\bloading\s*=/.test(tag)) return tag;
+    const width = Number((tag.match(/\bwidth=["']?(\d+)/i) || [])[1] || 0);
+    const sizeable = !TINY_IMG.test(tag) && (width === 0 || width >= 200);
     const decoding = /\bdecoding\s*=/.test(tag) ? '' : ' decoding="async"';
-    if (seen <= 3) return tag.replace(/<img\b/i, `<img${decoding} loading="eager"`);
-    return tag.replace(/<img\b/i, `<img${decoding} loading="lazy"`);
+    let want;
+    if (sizeable && !lcpDone) { want = 'eager'; lcpDone = true; }
+    else want = 'lazy';
+    const withoutLoading = tag.replace(/\s+loading\s*=\s*["'][^"']*["']/i, '');
+    return withoutLoading.replace(/<img\b/i, `<img${decoding} loading="${want}"`);
   });
 }
 
