@@ -1,4 +1,5 @@
 import { applySeo } from './seo.mjs';
+import { bundleCss, relinkCss } from './bundle-css.mjs';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,12 +37,16 @@ await cp(path.join(here, 'assets', 'forms.js'), 'dist/forms.js');
 // instead of jumping to the live original site. The captured pages in site/ keep the
 // absolute URLs; only the built output in dist/ is localised.
 const sourceOrigin = new URL(report.source).origin;
+const escapedOrigin = sourceOrigin.replaceAll('/', '\\/'); // as it appears in inline JSON/JS
 function localizeLinks(html) {
   return html
     .replaceAll(`href="${sourceOrigin}/`, 'href="/')
     .replaceAll(`href="${sourceOrigin}"`, 'href="/"')
     .replaceAll(`action="${sourceOrigin}/`, 'action="/')
-    .replaceAll(`action="${sourceOrigin}"`, 'action="/"');
+    .replaceAll(`action="${sourceOrigin}"`, 'action="/"')
+    // Script config vars (ajaxurl, REST roots, …) → same-origin so they hit this server.
+    .replaceAll(`"${escapedOrigin}\\/`, '"\\/')
+    .replaceAll(`'${sourceOrigin}/`, "'/");
 }
 
 // Defer offscreen images. The first few <img> on a page (logo, hero) load eagerly;
@@ -65,17 +70,21 @@ const HEAD_ADDITIONS = [
   '<script defer src="/forms.js"></script>',
 ].join('');
 
+// Fold the many render-blocking <head> stylesheets into one cached bundle.
+const bundledCss = await bundleCss('dist');
+
 async function connectPages(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      const out = lazyLoadImages(localizeLinks(html)).replace('</head>', `${HEAD_ADDITIONS}</head>`);
+      const out = relinkCss(lazyLoadImages(localizeLinks(html)), bundledCss).replace('</head>', `${HEAD_ADDITIONS}</head>`);
       await writeFile(file, out);
     }
   }
 }
 await connectPages('dist');
 await applySeo('dist');
-console.log(`Built ${report.pages.length} pages. API origin: ${apiBaseUrl || 'same origin (/api)'}.`);
+const bundleKb = bundledCss.size ? Math.round((await readFile('dist/assets/site.css')).length / 1024) : 0;
+console.log(`Built ${report.pages.length} pages. CSS bundle: ${bundledCss.size} files, ${bundleKb} KB. API origin: ${apiBaseUrl || 'same origin (/api)'}.`);

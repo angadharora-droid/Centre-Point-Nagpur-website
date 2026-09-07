@@ -180,6 +180,18 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
   const allowed = new Set(origins.split(',').map(value => value.trim()).filter(Boolean));
   return http.createServer(async (req, res) => {
     const pathname = new URL(req.url, 'http://localhost').pathname;
+
+    // Legacy WordPress AJAX endpoint the captured plugins still ping. There is no
+    // WordPress here; reply the way admin-ajax.php does for an unknown action ("0")
+    // so those requests resolve quietly instead of 404-ing.
+    if (pathname === '/wp-admin/admin-ajax.php' || pathname === '/xmlrpc.php') {
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Cache-Control', 'no-store');
+      if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      return res.end('0');
+    }
+
     if (pathname === '/api' || pathname.startsWith('/api/')) {
       res.setHeader('Vary', 'Origin');
       const origin = corsOrigin(req, allowed);
