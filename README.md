@@ -122,3 +122,24 @@ the repository but is not part of this site.
 
 Reference: [Railway config as code](https://docs.railway.com/config-as-code/reference),
 [Railway health checks](https://docs.railway.com/deployments/healthchecks).
+
+## Why scanners report WordPress
+
+This service runs Node and MongoDB, not PHP or a WordPress installation. The
+original pages were exported from WordPress, so their layout still uses captured
+Hoteller/Elementor frontend CSS, classes and some JavaScript. Those signatures can
+make a scanner infer WordPress even though there is no WordPress admin or plugin
+installation to update here.
+
+The build removes obsolete generator metadata, unused Elementor Pro runtime
+(the capture has Pro 3.14 with core 3.30, but no Pro widgets), unused MotoPress and
+Content Views scripts where their UI is absent, and orphaned plugin setup code.
+Compatible local scripts are bundled in deferred execution order; URL-sensitive
+webpack runtimes and mutable runtime configuration stay separate. Duplicate
+Google Fonts requests are omitted when the same family is already self-hosted.
+The Swiftbook widget loads when a visitor selects **Check availability**, with
+loading/retry feedback and existing **Book Now** links still available.
+
+Retained layout classes and vendor licenses are intentional. Removing all traces
+of the original frontend requires replacing the remaining theme widgets, not
+installing a WordPress optimization plugin or just renaming asset directories.

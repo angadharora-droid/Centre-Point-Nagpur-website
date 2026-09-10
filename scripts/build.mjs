@@ -1,3 +1,4 @@
+import { cleanLegacyRuntime, bundleScripts, lazyBooking } from './legacy-cleanup.mjs';
 import { applySeo } from './seo.mjs';
 import { bundlePageCss } from './bundle-css.mjs';
 import { prepareImages, rewriteImages, deferScripts, filesIn, removeUnusedPlugins, responsiveBackgroundCss, asset } from './performance.mjs';
@@ -118,9 +119,10 @@ async function connectPages(directory) {
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      const prepared = rewrite(await processImages(removeUnusedPlugins(localizeLinks(html))));
+      const prepared = rewrite(await processImages(lazyBooking(cleanLegacyRuntime(removeUnusedPlugins(localizeLinks(html))))));
       const styled = await bundlePageCss(prepared, 'dist', css => rewriteImages(css, images, true), runtimeContent);
-      const out = await deferScripts(styled.replace('</head>', `${HEAD_ADDITIONS}</head>`), 'dist');
+      const deferred = await deferScripts(styled.replace('</head>', `${HEAD_ADDITIONS}</head>`), 'dist');
+      const out = await bundleScripts(deferred, 'dist');
       await writeFile(file, out);
     }
   }
