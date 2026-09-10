@@ -34,7 +34,7 @@ test('static responses compress and carry caching headers', async t => {
 
   const html = await fetch(`${base}/`, { headers: { 'Accept-Encoding': 'br' } });
   assert.equal(html.headers.get('content-encoding'), 'br');
-  assert.equal(html.headers.get('cache-control'), 'no-cache');
+  assert.match(html.headers.get('cache-control'), /s-maxage=3600/);
   const etag = html.headers.get('etag');
   assert.ok(etag);
   const revalidated = await fetch(`${base}/`, { headers: { 'If-None-Match': etag } });
@@ -42,7 +42,16 @@ test('static responses compress and carry caching headers', async t => {
 
   const css = await fetch(`${base}/app.css`, { headers: { 'Accept-Encoding': 'gzip' } });
   assert.equal(css.headers.get('content-encoding'), 'gzip');
-  assert.match(css.headers.get('cache-control'), /immutable/);
+  assert.match(css.headers.get('cache-control'), /must-revalidate/);
+  await writeFile(path.join(root, 'app.0123456789abcdef.css'), 'body{color:blue}');
+  const hashed = await fetch(`${base}/app.0123456789abcdef.css`);
+  assert.match(hashed.headers.get('cache-control'), /immutable/);
+  assert.equal((await fetch(base, {method:'POST'})).status, 405);
+  await writeFile(path.join(root, 'photo.jpg'), 'jpeg');
+  await writeFile(path.join(root, 'photo.jpg.webp'), 'webp');
+  const photo = await fetch(`${base}/photo.jpg`, {headers:{Accept:'image/webp'}});
+  assert.equal(photo.headers.get('content-type'), 'image/jpeg');
+  assert.equal(await photo.text(), 'jpeg');
 });
 
 test('health reports db state; storage is unconfigured without MONGODB_URI', async t => {

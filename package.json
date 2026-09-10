@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node backend/server.mjs",
     "build": "node scripts/build.mjs",
-    "prestart": "node scripts/build.mjs",
+    "prestart": "node scripts/build.mjs --runtime-only",
     "start": "node backend/server.mjs --dist",
     "test": "node --test 'tests/**/*.test.mjs'",
     "lint": "oxlint",

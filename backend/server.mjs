@@ -147,38 +147,38 @@ async function serveStatic(req, res, root, pathname) {
     let info = await stat(file);
     if (info.isDirectory()) { file = path.join(file, 'index.html'); info = await stat(file); }
 
-    let ext = path.extname(file).toLowerCase();
-    let vary = 'Accept-Encoding';
-
-    // Serve the pre-built .webp sibling to browsers that accept it.
-    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
-      vary = 'Accept, Accept-Encoding';
-      if ((req.headers.accept || '').includes('image/webp')) {
-        try {
-          const webp = await stat(file + '.webp');
-          file += '.webp';
-          info = webp;
-          ext = '.webp';
-        } catch { /* no sibling; serve the original */ }
-      }
-    }
+    const ext = path.extname(file).toLowerCase();
+    const vary = 'Accept-Encoding';
 
     const isHtml = ext === '.html';
     const route = file.slice(root.length).split(path.sep).join('/');
-    const etag = `"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
+    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
 
     const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ETag: etag, Vary: vary };
-    if (isHtml) headers['Cache-Control'] = 'no-cache';
+    if (isHtml) {
+      headers['Cache-Control'] = 'public, max-age=0, s-maxage=3600, stale-while-revalidate=60';
+      headers['Cloudflare-CDN-Cache-Control'] = 'public, max-age=3600';
+    }
     else if (NEVER_CACHE.has(route)) headers['Cache-Control'] = 'no-cache';
-    else if (IMMUTABLE.test(ext)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
-    else headers['Cache-Control'] = 'public, max-age=3600';
+    else if (/\.[a-f0-9]{16}\./.test(route) && IMMUTABLE.test(ext)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+    else headers['Cache-Control'] = 'public, max-age=0, must-revalidate';
 
     if (req.headers['if-none-match'] === etag) { res.writeHead(304, headers); return res.end(); }
 
-    let body = await readFile(file);
-    const encoding = COMPRESSIBLE.has(ext) && body.length > 512 ? pickEncoding(req.headers['accept-encoding']) : null;
+    const encoding = COMPRESSIBLE.has(ext) && info.size > 512 ? pickEncoding(req.headers['accept-encoding']) : null;
+    const key = `${file}:${info.mtimeMs}:${encoding}`;
+    let body = encoding ? encodedCache.get(key) : null;
+    if (!body) {
+      try { body = encoding ? await readFile(file + (encoding === 'br' ? '.br' : '.gz')) : null; } catch {}
+      if (body) {
+        if (encodedCache.size > 400) encodedCache.clear();
+        encodedCache.set(key, body);
+      } else {
+        body = await readFile(file);
+        if (encoding) body = await encodeBody(key, body, encoding);
+      }
+    }
     if (encoding) {
-      body = await encodeBody(`${file}:${info.mtimeMs}:${encoding}`, body, encoding);
       headers['Content-Encoding'] = encoding;
     }
     headers['Content-Length'] = body.length;
@@ -219,6 +219,10 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
         if (!res.headersSent) return json(res, 500, { error: 'Internal error' });
         return res.end();
       }
+    }
+    if (!['GET', 'HEAD'].includes(req.method)) {
+      res.writeHead(405, { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' });
+      return res.end();
     }
     return serveStatic(req, res, root, pathname);
   });

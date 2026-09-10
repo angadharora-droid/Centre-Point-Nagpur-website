@@ -31,7 +31,7 @@ the static site and serves it together with a small JSON API from the same origi
      set this only to point canonical links / the sitemap at a different host.
    - `PUBLIC_API_BASE_URL`, `FRONTEND_ORIGINS` — leave unset. The frontend calls
      `/api` on its own origin.
-4. Deploy. The container runs `scripts/build.mjs` on start, then serves `dist/`
+4. Deploy. Docker builds assets; startup refreshes configuration and SEO, then serves `dist/`
    and `/api` on Railway's `$PORT`.
 5. Check `https://YOUR-DOMAIN/api/health` →
    `{"status":"ok","service":"centrepoint-api","db":{"configured":true,"connected":true}}`.
@@ -53,16 +53,22 @@ timestamp, and the submitter's user agent and IP.
 
 ## Performance
 
-- The server brotli/gzip-compresses HTML, CSS, JS and SVG on the fly (compressed
-  copies are cached in memory) and sends `ETag` + `304` for revalidation.
-- Static assets (`/wp-content/…`, fonts, CSS, JS, images) are served
-  `Cache-Control: immutable` for a year; HTML is `no-cache` (revalidated).
-- `scripts/build.mjs` marks offscreen images `loading="lazy"` and adds
-  `preconnect` hints for Google Fonts.
-- `scripts/optimize-images.mjs` is a one-time macOS (`sips`) tool that recompressed
-  the captured images: JPEGs re-encoded at q80 / max 2000px, large photo PNGs
-  converted to JPEG with every reference rewritten. It cut `site/` from ~169 MB to
-  ~126 MB. Re-run it only if new large images are added to `site/`.
+- HTML permits one hour of shared caching, while browsers revalidate. A scoped
+  Cloudflare Cache Rule must also enable HTML caching; see
+  [production rollout](deploy/PERFORMANCE.md).
+- Generated CSS, inline scripts and WebP images use content hashes and one-year
+  immutable caching. Unversioned assets revalidate instead of staying stale.
+- Each page bundles only its own CSS, preserving inline-style cascade boundaries.
+  CSS is minified; unused shop/slider assets are omitted where no matching UI is
+  present. The two largest ElementsKit widget stylesheets are conservatively
+  pruned using page markup and captured runtime JavaScript.
+- Classic scripts and their inline setup execute in deferred document order.
+- Images use explicit WebP URLs, responsive width variants and intrinsic sizes;
+  the first sizeable image gets high fetch priority. CSS backgrounds use smaller
+  variants at mobile/tablet breakpoints.
+- HTML/CSS/JS compression happens during the Docker build. Compressed responses
+  are reused in memory, avoiding repeated file reads for warm text requests.
+- Startup updates runtime configuration and SEO without regenerating images.
 
 ## SEO
 
@@ -79,7 +85,8 @@ Railway/Vercel environment every page builds `noindex`.
 ## Local development
 
 ```sh
-cd backend && npm install && cd ..     # once: installs the mongodb driver
+npm ci --prefix backend                 # once: installs the mongodb driver
+SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm ci --prefix scripts  # build tools
 cp .env.example .env                    # then fill in MONGODB_URI / ADMIN_TOKEN
 ```
 

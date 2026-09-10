@@ -1,44 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { relinkCss } from '../scripts/bundle-css.mjs';
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { bundlePageCss } from '../scripts/bundle-css.mjs';
 
-const bundled = new Set(['/wp-content/themes/hoteller/css/core/screen.css', '/wp-content/themes/hoteller-child/style.css']);
-
-test('relinkCss keeps the bundle where the first stylesheet was, ahead of the Customizer inline styles', () => {
-  const html = [
-    '<head>',
-    '<link rel="stylesheet" href="/wp-content/themes/hoteller/css/core/screen.css?ver=1">',
-    '<style id="hoteller-screen-inline-css">.x{}</style>',
-    '<link rel="stylesheet" href="/wp-content/themes/hoteller-child/style.css?ver=1">',
-    '<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">',
-    '<style id="wp-custom-css">.y{}</style>',
-    '<style id="kirki-inline-styles">body{color:#b8860b}</style>',
-    '</head>',
-  ].join('');
-
-  const out = relinkCss(html, bundled);
-
-  // Exactly one bundle link, and it sits before both inline override blocks.
-  assert.equal((out.match(/\/assets\/site\.css/g) || []).length, 1);
-  assert.ok(out.indexOf('/assets/site.css') < out.indexOf('wp-custom-css'));
-  assert.ok(out.indexOf('/assets/site.css') < out.indexOf('kirki-inline-styles'));
-  // Non-bundled stylesheets (Google Fonts) and inline styles are left intact.
-  assert.ok(out.includes('fonts.googleapis.com'));
-  assert.ok(out.includes('id="kirki-inline-styles"'));
-  // Bundled <link> tags are gone.
-  assert.ok(!out.includes('hoteller-child/style.css'));
-  assert.ok(!out.includes('core/screen.css'));
-});
-
-test('relinkCss falls back to </head> when a page links none of the bundled sheets', () => {
-  const html = '<head><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto"></head>';
-  const out = relinkCss(html, bundled);
-  assert.equal((out.match(/\/assets\/site\.css/g) || []).length, 1);
-  assert.ok(out.includes('fonts.googleapis.com'));
-  assert.ok(out.endsWith('<link rel="stylesheet" href="/assets/site.css"></head>'));
-});
-
-test('relinkCss is a no-op with an empty bundle', () => {
-  const html = '<head><link rel="stylesheet" href="/wp-content/themes/hoteller-child/style.css"></head>';
-  assert.equal(relinkCss(html, new Set()), html);
+void test('page CSS preserves inline cascade boundaries, media and content versioning', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'cp-css-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'wp-content'));
+  await writeFile(path.join(root, 'wp-content/a.css'), '.x { color: red; background:url(img.png) }');
+  await writeFile(path.join(root, 'wp-content/b.css'), '.x { color: blue }');
+  const html = '<head><link rel="stylesheet" href="/wp-content/a.css"><style>.x{color:gold}</style><link rel="stylesheet" href="/wp-content/b.css" media="screen"></head>';
+  const out = await bundlePageCss(html, root);
+  const links = [...out.matchAll(/href="([^"]+)"/g)].map(x => x[1]);
+  assert.equal(links.length, 2);
+  assert.ok(out.indexOf(links[0]) < out.indexOf('<style>'));
+  assert.ok(out.indexOf(links[1]) > out.indexOf('</style>'));
+  assert.match(await readFile(path.join(root, links[0]), 'utf8'), /\/wp-content\/img.png/);
+  assert.match(await readFile(path.join(root, links[1]), 'utf8'), /@media screen/);
+  await writeFile(path.join(root, 'wp-content/a.css'), '.x { color: green }');
+  assert.notEqual(await bundlePageCss(html, root), out);
 });

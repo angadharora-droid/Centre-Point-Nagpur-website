@@ -15,3 +15,5 @@ vite.config.ts
 tsconfig.json
 components.json
 package-lock.json
+
+!scripts/package-lock.json

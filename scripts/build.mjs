@@ -1,7 +1,9 @@
 import { applySeo } from './seo.mjs';
-import { bundleCss, relinkCss } from './bundle-css.mjs';
+import { bundlePageCss } from './bundle-css.mjs';
+import { prepareImages, rewriteImages, deferScripts, filesIn, removeUnusedPlugins, responsiveBackgroundCss, asset } from './performance.mjs';
+import { brotliCompressSync, gzipSync, constants } from 'node:zlib';
 import { imageSizeOf } from './image-size.mjs';
-import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,9 +23,13 @@ if (rawOrigin) {
   }
   apiBaseUrl = url.origin;
 }
-await rm('dist', { recursive: true, force: true });
-await mkdir('dist', { recursive: true });
-await cp('site', 'dist', { recursive: true });
+let runtimeOnly = process.argv.includes('--runtime-only');
+try { await access('dist/index.html'); } catch { runtimeOnly = false; }
+if (!runtimeOnly) {
+  await rm('dist', { recursive: true, force: true });
+  await mkdir('dist', { recursive: true });
+  await cp('site', 'dist', { recursive: true });
+}
 await writeFile('dist/runtime-config.js', `window.CENTREPOINT_CONFIG = Object.freeze(${JSON.stringify({ apiBaseUrl })});\n`);
 await writeFile('dist/api-client.js', `window.centrePointApi = Object.freeze({
   async health() {
@@ -73,7 +79,10 @@ async function processImages(html) {
     const declaredWidth = Number((tag.match(/\bwidth=["']?(\d+)/i) || [])[1] || 0);
     const sizeable = !TINY_IMG.test(tag) && (declaredWidth === 0 || declaredWidth >= 200);
     const want = sizeable && !lcpDone ? 'eager' : 'lazy';
-    if (want === 'eager') lcpDone = true;
+    if (want === 'eager') {
+      lcpDone = true;
+      tag = tag.replace(/\sfetchpriority=(["']).*?\1/gi, '').replace(/<img\b/i, '<img fetchpriority="high"');
+    }
 
     if (!/\bwidth=/i.test(tag) || !/\bheight=/i.test(tag)) {
       const src = (tag.match(/\bsrc=["']([^"']+)["']/i) || [])[1];
@@ -98,7 +107,10 @@ const HEAD_ADDITIONS = [
 ].join('');
 
 // Fold the many render-blocking <head> stylesheets into one cached bundle.
-const bundledCss = await bundleCss('dist');
+if (!runtimeOnly) {
+const runtimeContent = (await Promise.all((await filesIn('site')).filter(f => f.endsWith('.js')).map(f => readFile(f, 'utf8')))).join('\n');
+const images = await prepareImages('dist');
+const rewrite = html => rewriteImages(html, images);
 
 async function connectPages(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -106,12 +118,28 @@ async function connectPages(directory) {
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      const out = relinkCss(await processImages(localizeLinks(html)), bundledCss).replace('</head>', `${HEAD_ADDITIONS}</head>`);
+      const prepared = rewrite(await processImages(removeUnusedPlugins(localizeLinks(html))));
+      const styled = await bundlePageCss(prepared, 'dist', css => rewriteImages(css, images, true), runtimeContent);
+      const out = await deferScripts(styled.replace('</head>', `${HEAD_ADDITIONS}</head>`), 'dist');
       await writeFile(file, out);
     }
   }
 }
 await connectPages('dist');
+const backgrounds = await asset('dist', 'backgrounds', 'css', responsiveBackgroundCss(images));
+for (const file of (await filesIn('dist')).filter(f => f.endsWith('.html'))) {
+  const html = await readFile(file, 'utf8');
+  await writeFile(file, html.replace('</head>', `<link rel="stylesheet" href="${backgrounds}"></head>`));
+}
+}
 await applySeo('dist');
-const bundleKb = bundledCss.size ? Math.round((await readFile('dist/assets/site.css')).length / 1024) : 0;
-console.log(`Built ${report.pages.length} pages. CSS bundle: ${bundledCss.size} files, ${bundleKb} KB. API origin: ${apiBaseUrl || 'same origin (/api)'}.`);
+// Precompress at build time: first requests never pay the compression cost.
+for (const file of await filesIn('dist')) {
+  if (!/\.(html|css|js|mjs|json|svg|xml|txt)$/.test(file)) continue;
+  if (runtimeOnly && !file.endsWith('.html') && !['runtime-config.js', 'api-client.js', 'forms.js', 'robots.txt', 'sitemap.xml'].includes(path.basename(file))) continue;
+  const body = await readFile(file);
+  if (body.length <= 512) continue;
+  await writeFile(file + '.br', brotliCompressSync(body, { params: { [constants.BROTLI_PARAM_QUALITY]: 6 } }));
+  await writeFile(file + '.gz', gzipSync(body, { level: 6 }));
+}
+console.log(`Built ${report.pages.length} pages with versioned CSS, deferred scripts, responsive WebP and precompressed text. API origin: ${apiBaseUrl || 'same origin (/api)'}.`);
