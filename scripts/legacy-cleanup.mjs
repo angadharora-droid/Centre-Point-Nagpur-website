@@ -61,6 +61,25 @@ export async function bundleScripts(html, root) {
   return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, (tag, offset) => replacements.has(offset) ? replacements.get(offset) : tag);
 }
 
+// Drop repeat <link> requests for a resource already pulled earlier on the page.
+// Editor-embedded widgets re-declare the same Font Awesome / Google Font sheets and
+// the build appends its own preconnects; each duplicate is another blocking fetch.
+export function dedupeHeadLinks(html) {
+  const seen = new Set();
+  return html.replace(/<link\b[^>]*>/gi, tag => {
+    const rel = (tag.match(/\brel=(["'])(.*?)\1/i)?.[2] || '').trim().toLowerCase();
+    if (!['stylesheet', 'preconnect', 'dns-prefetch'].includes(rel)) return tag;
+    const href = (tag.match(/\bhref=(["'])(.*?)\1/i)?.[2] || '').replaceAll('&amp;', '&').trim();
+    if (!href) return tag;
+    // A connection's CORS mode is part of its identity; a stylesheet's is not.
+    const crossorigin = rel !== 'stylesheet' && /\bcrossorigin\b/i.test(tag) ? 'x' : '';
+    const key = `${rel}|${href}|${crossorigin}`;
+    if (seen.has(key)) return '';
+    seen.add(key);
+    return tag;
+  });
+}
+
 export function lazyBooking(html) {
   let attributes;
   html = html.replace(/<script\b([^>]*\bsrc=["']https:\/\/www\.swiftbook\.io\/plugin\/js\/booking-service\.min\.js["'][^>]*)>[\s\S]*?<\/script>/gi, (_, attrs) => {

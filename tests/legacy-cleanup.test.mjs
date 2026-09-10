@@ -4,7 +4,7 @@ import {mkdtemp, readFile, writeFile, rm} from 'node:fs/promises';
 import path from 'node:path';
 import {tmpdir} from 'node:os';
 import vm from 'node:vm';
-import {cleanLegacyRuntime, bundleScripts, lazyBooking} from '../scripts/legacy-cleanup.mjs';
+import {cleanLegacyRuntime, bundleScripts, lazyBooking, dedupeHeadLinks} from '../scripts/legacy-cleanup.mjs';
 
 void test('removes obsolete generators and unused Pro runtime without removing styling', () => {
  const html = '<meta name="generator" content="WordPress"><link rel="stylesheet" href="/wp-content/plugins/elementor-pro/style.css"><script src="/wp-content/plugins/elementor-pro/assets/js/frontend.min.js"></script><script id="elementor-pro-frontend-js-before">var elementorProFrontendConfig={}</script>';
@@ -39,6 +39,20 @@ void test('booking request starts on interaction, preserving vendor attributes',
  assert.ok(out.includes("button.addEventListener('click'"));
  assert.ok(out.includes('"propertyid":"hotel"'));
  assert.ok(out.includes('script.onerror'));
+});
+void test('dedupeHeadLinks drops repeat stylesheet and preconnect requests, keeps the first', () => {
+ const fa = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="all" onload="this.media=\'all\'" />';
+ const faAgain = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />';
+ const pc = '<link rel="preconnect" href="https://fonts.googleapis.com">';
+ const out = dedupeHeadLinks(fa + faAgain + pc + pc + '<link rel="stylesheet" href="/assets/site.css">');
+ assert.equal((out.match(/font-awesome/g) || []).length, 1);
+ assert.equal((out.match(/fonts\.googleapis\.com/g) || []).length, 1);
+ assert.ok(out.includes('/assets/site.css'));
+ assert.ok(out.includes("onload=\"this.media='all'\"")); // first occurrence is the one kept
+});
+void test('dedupeHeadLinks leaves distinct hrefs and non-dedup rels untouched', () => {
+ const html = '<link rel="stylesheet" href="/a.css"><link rel="stylesheet" href="/b.css"><link rel="icon" href="/f.png"><link rel="icon" href="/f.png">';
+ assert.equal(dedupeHeadLinks(html), html);
 });
 void test('removes duplicate Google Fonts requests only when local families are present', () => {
  const local='<link rel="stylesheet" href="/wp-content/uploads/elementor/google-fonts/css/cormorantgaramond.css">';
