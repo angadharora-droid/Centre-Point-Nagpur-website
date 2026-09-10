@@ -40,6 +40,13 @@ void test('booking request starts on interaction, preserving vendor attributes',
  assert.ok(out.includes('"propertyid":"hotel"'));
  assert.ok(out.includes('script.onerror'));
 });
+void test('drops the redundant cdnjs Font Awesome sheet when the theme bundles it locally', () => {
+ const local = "<link rel='stylesheet' href='/wp-content/themes/hoteller/css/font-awesome.min.css'>";
+ const cdn = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="all" onload="this.media=\'all\'" />';
+ assert.ok(!cleanLegacyRuntime(local + cdn).includes('cdnjs.cloudflare.com'));
+ assert.ok(cleanLegacyRuntime(local + cdn).includes('/themes/hoteller/css/font-awesome'));
+ assert.ok(cleanLegacyRuntime(cdn).includes('cdnjs.cloudflare.com')); // kept when no local sheet
+});
 void test('dedupeHeadLinks drops repeat stylesheet and preconnect requests, keeps the first', () => {
  const fa = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="all" onload="this.media=\'all\'" />';
  const faAgain = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />';

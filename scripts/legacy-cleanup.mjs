@@ -26,10 +26,17 @@ export function cleanLegacyRuntime(html) {
     const families = url.searchParams.getAll('family').flatMap(value => value.split('|')).map(value => value.split(':')[0].toLowerCase().replace(/[^a-z]/g, ''));
     return families.length && families.every(f => localFonts.has(f)) ? '' : tag;
   });
-  return html
+  html = html
     .replace(/<meta\b[^>]*\bname=["']generator["'][^>]*>/gi, '')
     .replace(/<link\b[^>]*\brel=["'](?:https:\/\/api\.w\.org\/|EditURI|wlwmanifest|shortlink|pingback)["'][^>]*>/gi, '')
     .replace(/<script\b[^>]*\btype=["']text\/template["'][^>]*\bid=["']tmpl-(?:variation|unavailable-variation)-template["'][^>]*>[\s\S]*?<\/script>/gi, '');
+  // Editor-embedded widgets pull a full Font Awesome sheet from cdnjs. When the
+  // theme already bundles Font Awesome locally it is a redundant render-blocking
+  // request to a third party; drop it.
+  if (/\/themes\/[^"']*font-awesome(?:\.min)?\.css/i.test(html)) {
+    html = html.replace(/<link\b[^>]*cdnjs\.cloudflare\.com\/ajax\/libs\/font-awesome\/[^>]*>/gi, '');
+  }
+  return html;
 }
 
 // Merge compatible classic scripts in their original deferred execution order.
