@@ -71,6 +71,12 @@ def rewrite(body):
  for url in sorted(pages,key=len,reverse=True):
   path=urllib.parse.urlsplit(url).path
   body=body.replace('href="'+url+'"','href="'+path+'"').replace("href='"+url+"'","href='"+path+"'")
+ # ElementsKit's parallax module prints its base URL as a bare inline var; the
+ # upstream page ships it unquoted, so JS parses the path as a regex literal and
+ # throws "Invalid regular expression flags". Restore the string quotes.
+ body=body.replace(
+  'var elementskit_module_parallax_url = /wp-content/plugins/elementskit/modules/parallax/;',
+  'var elementskit_module_parallax_url = "/wp-content/plugins/elementskit/modules/parallax/";')
  return body
 for url,body in pages.items():
  path=urllib.parse.unquote(urllib.parse.urlsplit(url).path).strip('/')
