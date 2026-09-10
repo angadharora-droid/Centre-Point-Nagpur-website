@@ -62,13 +62,21 @@ export async function bundleCss(distDir) {
   return new Set(order);
 }
 
-// Drop every bundled stylesheet <link> from a page (head or body) and add one
-// bundle link at the end of <head>.
+// Replace the first bundled stylesheet <link> with the one bundle link and drop
+// the rest. Keeping the bundle where the first <link> was preserves its place in
+// the cascade relative to the inline <style> blocks WordPress prints after it
+// (Customizer/Kirki colors, Additional CSS, …) — appending it at </head> instead
+// lets the theme defaults in the bundle override every customized colour.
 export function relinkCss(html, bundled) {
   if (!bundled.size || !html.includes('</head>')) return html;
+  const bundleLink = '<link rel="stylesheet" href="/assets/site.css">';
+  let injected = false;
   const stripped = html.replace(STYLESHEET, tag => {
     const href = (tag.match(/href=(['"])([^'"]*)\1/) || [])[2] || '';
-    return bundled.has(href.split('?')[0]) ? '' : tag;
+    if (!bundled.has(href.split('?')[0])) return tag;
+    if (injected) return '';
+    injected = true;
+    return bundleLink;
   });
-  return stripped.replace('</head>', '<link rel="stylesheet" href="/assets/site.css"></head>');
+  return injected ? stripped : stripped.replace('</head>', `${bundleLink}</head>`);
 }
