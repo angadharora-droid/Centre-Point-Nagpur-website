@@ -147,12 +147,27 @@ async function serveStatic(req, res, root, pathname) {
     let info = await stat(file);
     if (info.isDirectory()) { file = path.join(file, 'index.html'); info = await stat(file); }
 
-    const ext = path.extname(file).toLowerCase();
+    let ext = path.extname(file).toLowerCase();
+    let vary = 'Accept-Encoding';
+
+    // Serve the pre-built .webp sibling to browsers that accept it.
+    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+      vary = 'Accept, Accept-Encoding';
+      if ((req.headers.accept || '').includes('image/webp')) {
+        try {
+          const webp = await stat(file + '.webp');
+          file += '.webp';
+          info = webp;
+          ext = '.webp';
+        } catch { /* no sibling; serve the original */ }
+      }
+    }
+
     const isHtml = ext === '.html';
     const route = file.slice(root.length).split(path.sep).join('/');
     const etag = `"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
 
-    const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ETag: etag, Vary: 'Accept-Encoding' };
+    const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ETag: etag, Vary: vary };
     if (isHtml) headers['Cache-Control'] = 'no-cache';
     else if (NEVER_CACHE.has(route)) headers['Cache-Control'] = 'no-cache';
     else if (IMMUTABLE.test(ext)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';

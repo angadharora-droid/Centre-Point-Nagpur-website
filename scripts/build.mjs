@@ -1,5 +1,6 @@
 import { applySeo } from './seo.mjs';
 import { bundleCss, relinkCss } from './bundle-css.mjs';
+import { imageSizeOf } from './image-size.mjs';
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,21 +50,43 @@ function localizeLinks(html) {
     .replaceAll(`'${sourceOrigin}/`, "'/");
 }
 
-// Only the first sizeable image on a page (the LCP candidate) loads eagerly;
-// every other image — including slider slides the theme marked eager — is lazied.
+// Only the first sizeable image on a page (the LCP candidate) loads eagerly; every
+// other image — including slider slides the theme marked eager — is lazied. Also
+// stamp intrinsic width/height on <img> that lack them so the layout doesn't shift.
 const TINY_IMG = /\b(?:mobile-icon|icon|logo|Untitled-298|favicon|spinner|loader)\b/i;
-function lazyLoadImages(html) {
+const dimCache = new Map();
+
+async function dimsFor(src) {
+  const clean = src.split(/[?#]/)[0];
+  if (!clean.startsWith('/')) return null;
+  if (!dimCache.has(clean)) dimCache.set(clean, await imageSizeOf(path.join('dist', clean)));
+  return dimCache.get(clean);
+}
+
+async function processImages(html) {
+  const tags = [...html.matchAll(/<img\b[^>]*>/gi)];
   let lcpDone = false;
-  return html.replace(/<img\b[^>]*>/gi, tag => {
-    const width = Number((tag.match(/\bwidth=["']?(\d+)/i) || [])[1] || 0);
-    const sizeable = !TINY_IMG.test(tag) && (width === 0 || width >= 200);
+  let result = '';
+  let last = 0;
+  for (const match of tags) {
+    let tag = match[0];
+    const declaredWidth = Number((tag.match(/\bwidth=["']?(\d+)/i) || [])[1] || 0);
+    const sizeable = !TINY_IMG.test(tag) && (declaredWidth === 0 || declaredWidth >= 200);
+    const want = sizeable && !lcpDone ? 'eager' : 'lazy';
+    if (want === 'eager') lcpDone = true;
+
+    if (!/\bwidth=/i.test(tag) || !/\bheight=/i.test(tag)) {
+      const src = (tag.match(/\bsrc=["']([^"']+)["']/i) || [])[1];
+      const dims = src ? await dimsFor(src) : null;
+      if (dims) tag = tag.replace(/<img\b/i, `<img width="${dims.width}" height="${dims.height}"`);
+    }
     const decoding = /\bdecoding\s*=/.test(tag) ? '' : ' decoding="async"';
-    let want;
-    if (sizeable && !lcpDone) { want = 'eager'; lcpDone = true; }
-    else want = 'lazy';
-    const withoutLoading = tag.replace(/\s+loading\s*=\s*["'][^"']*["']/i, '');
-    return withoutLoading.replace(/<img\b/i, `<img${decoding} loading="${want}"`);
-  });
+    tag = tag.replace(/\s+loading\s*=\s*["'][^"']*["']/i, '').replace(/<img\b/i, `<img${decoding} loading="${want}"`);
+
+    result += html.slice(last, match.index) + tag;
+    last = match.index + match[0].length;
+  }
+  return result + html.slice(last);
 }
 
 const HEAD_ADDITIONS = [
@@ -83,7 +106,7 @@ async function connectPages(directory) {
     if (entry.isDirectory()) await connectPages(file);
     else if (entry.name.endsWith('.html')) {
       const html = await readFile(file, 'utf8');
-      const out = relinkCss(lazyLoadImages(localizeLinks(html)), bundledCss).replace('</head>', `${HEAD_ADDITIONS}</head>`);
+      const out = relinkCss(await processImages(localizeLinks(html)), bundledCss).replace('</head>', `${HEAD_ADDITIONS}</head>`);
       await writeFile(file, out);
     }
   }

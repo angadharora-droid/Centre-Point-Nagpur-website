@@ -1,6 +1,7 @@
-// One-time maintenance tool (macOS `sips`). Shrinks the heavy captured images in
-// site/ in place: large JPEGs are re-encoded, large photo PNGs become JPEGs and
-// every reference (src, srcset, preload, og:image, CSS url()) is rewritten.
+// One-time maintenance tool (macOS `sips` + `cwebp`). Shrinks the heavy captured
+// images in site/ in place: large JPEGs are re-encoded, large photo PNGs become
+// JPEGs (every reference rewritten), and a .webp sibling is written next to each
+// raster image for the server to content-negotiate.
 // Run from the repo root:  node scripts/optimize-images.mjs
 import { execFile } from 'node:child_process';
 import { readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -11,8 +12,10 @@ const run = promisify(execFile);
 const SITE = path.resolve('site');
 const MAX_DIM = 2000;
 const JPEG_Q = 80;
+const WEBP_Q = 78;
 const JPEG_MIN = 150 * 1024; // recompress JPEGs larger than this
 const PNG_MIN = 250 * 1024;  // convert PNGs larger than this
+const WEBP_MIN = 20 * 1024;  // make a webp sibling for rasters larger than this
 // Keep these PNGs as-is (logos / flat graphics that may rely on transparency).
 const KEEP_PNG = /(logo|icon|cpngp|Untitled-|favicon|sprite)/i;
 
@@ -31,6 +34,20 @@ const webPath = f => '/' + path.relative(SITE, f).split(path.sep).join('/');
 const renames = new Map(); // '/wp-content/.../foo.png' -> '/wp-content/.../foo.jpg'
 let jpegSaved = 0;
 let pngSaved = 0;
+let webpCount = 0;
+let webpSaved = 0;
+
+async function makeWebp(file) {
+  const before = await size(file).catch(() => 0);
+  if (before < WEBP_MIN) return;
+  const out = file + '.webp';
+  try { if ((await stat(out)).mtimeMs >= (await stat(file)).mtimeMs) return; } catch { /* not built yet */ }
+  await run('cwebp', ['-quiet', '-q', String(WEBP_Q), '-metadata', 'none', file, '-o', out], { maxBuffer: 1 << 24 });
+  const after = await size(out);
+  if (after >= before) { await rm(out, { force: true }); return; }
+  webpCount += 1;
+  webpSaved += before - after;
+}
 
 for await (const file of walk(SITE)) {
   const ext = path.extname(file).toLowerCase();
@@ -49,6 +66,8 @@ for await (const file of walk(SITE)) {
     await rm(file, { force: true });
     renames.set(webPath(file), webPath(jpg));
   }
+
+  if (['.jpg', '.jpeg', '.png'].includes(path.extname(file).toLowerCase())) await makeWebp(file);
 }
 
 let touched = 0;
@@ -64,5 +83,6 @@ if (renames.size) {
 
 console.log(`JPEG recompressed: saved ${(jpegSaved / 1048576).toFixed(1)} MB`);
 console.log(`PNG → JPEG: ${renames.size} images, saved ${(pngSaved / 1048576).toFixed(1)} MB`);
+console.log(`WebP siblings: ${webpCount} written, ${(webpSaved / 1048576).toFixed(1)} MB lighter than their source`);
 console.log(`${touched} text files updated`);
 for (const [from, to] of renames) console.log(`  ${from} -> ${path.basename(to)}`);
