@@ -34,7 +34,8 @@ test('static responses compress and carry caching headers', async t => {
 
   const html = await fetch(`${base}/`, { headers: { 'Accept-Encoding': 'br' } });
   assert.equal(html.headers.get('content-encoding'), 'br');
-  assert.match(html.headers.get('cache-control'), /s-maxage=3600/);
+  assert.match(html.headers.get('cache-control'), /s-maxage=300/);
+  assert.equal(html.headers.get('cloudflare-cdn-cache-control'), 'public, max-age=300');
   const etag = html.headers.get('etag');
   assert.ok(etag);
   const revalidated = await fetch(`${base}/`, { headers: { 'If-None-Match': etag } });

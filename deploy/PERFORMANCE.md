@@ -11,12 +11,12 @@
    allows only captured public HTML routes and GET/HEAD, excluding Authorization
    requests. API, admin, runtime JS and unknown paths are outside its allowlist.
 3. Purge the site's HTML URLs from Cloudflare after deployment so cached HTML
-   picks up the new hashed assets. Allow up to one hour for HTML already cached in
+   picks up the new hashed assets. Allow up to five minutes for HTML newly cached in
    other CDNs. Old unversioned CSS already cached by browsers cannot be remotely
    expired; the rebuilt HTML references different filenames and avoids those entries.
 4. Request the live homepage twice with `curl -sSI https://YOUR_LIVE_HOSTNAME/`.
    The second request should show `cf-cache-status: HIT` (assuming the request
-   reaches the same edge cache). Confirm `Age` grows, HTML uses `s-maxage=3600`,
+   reaches the same edge cache). Confirm `Age` grows, HTML uses `s-maxage=300`,
    API responses remain `no-store`, and direct `.webp` responses are `image/webp`.
 5. Check live menus, room gallery, Swiftbook widget and enquiry submission on
    desktop and mobile. Script execution has been deferred as an ordered group,

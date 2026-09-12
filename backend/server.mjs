@@ -194,8 +194,8 @@ async function serveStatic(req, res, root, pathname) {
 
     const headers = { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ETag: etag, Vary: vary };
     if (isHtml) {
-      headers['Cache-Control'] = 'public, max-age=0, s-maxage=3600, stale-while-revalidate=60';
-      headers['Cloudflare-CDN-Cache-Control'] = 'public, max-age=3600';
+      headers['Cache-Control'] = 'public, max-age=0, s-maxage=300, stale-while-revalidate=30';
+      headers['Cloudflare-CDN-Cache-Control'] = 'public, max-age=300';
     }
     else if (NEVER_CACHE.has(route)) headers['Cache-Control'] = 'no-cache';
     else if (/\.[a-f0-9]{16}\./.test(route) && IMMUTABLE.test(ext)) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
