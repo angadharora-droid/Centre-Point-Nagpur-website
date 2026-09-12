@@ -1192,7 +1192,63 @@ body .mphb-reserve-room-section .mphb-rooms-quantity-wrapper:after {
 		</div>
 					</div>
 		</section>
-				<section class="elementor-section elementor-top-section elementor-element elementor-element-dc725e0 elementor-section-boxed elementor-section-height-default elementor-section-height-default" data-id="dc725e0" data-element_type="section" data-settings="{&quot;hoteller_ext_is_background_parallax&quot;:&quot;false&quot;,&quot;hoteller_ext_is_background_on_scroll&quot;:&quot;false&quot;,&quot;ekit_has_onepagescroll_dot&quot;:&quot;yes&quot;}">
+		<section class="cp-brochure" aria-labelledby="cp-brochure-title">
+			<style>
+				.cp-brochure { background: #f8f4f1; padding: 72px 24px; }
+				.cp-brochure__inner { margin: 0 auto; max-width: 1180px; }
+				.cp-brochure__heading { margin: 0 auto 38px; max-width: 780px; text-align: center; }
+				.cp-brochure__eyebrow { color: #a70062; font-size: 14px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+				.cp-brochure__heading h2 { color: #2b2025; font-family: "Cormorant Garamond", serif; font-size: clamp(38px, 5vw, 58px); line-height: 1.05; margin: 10px 0 14px; }
+				.cp-brochure__heading p { color: #554a4f; font-size: 17px; line-height: 1.65; margin: 0; }
+				.cp-brochure__facts { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 38px; }
+				.cp-brochure__fact { background: #fff; border-top: 3px solid #a70062; box-shadow: 0 8px 26px rgba(47, 29, 38, .08); padding: 24px 18px; text-align: center; }
+				.cp-brochure__fact strong { color: #a70062; display: block; font-size: 27px; line-height: 1; margin-bottom: 8px; }
+				.cp-brochure__fact span { color: #554a4f; font-size: 14px; line-height: 1.4; }
+				.cp-brochure__pages { display: grid; gap: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+				.cp-brochure__page { background: #fff; box-shadow: 0 12px 36px rgba(47, 29, 38, .12); color: #2b2025; display: block; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
+				.cp-brochure__page:hover, .cp-brochure__page:focus-visible { box-shadow: 0 16px 42px rgba(47, 29, 38, .18); transform: translateY(-4px); }
+				.cp-brochure__page img { display: block; height: auto; width: 100%; }
+				.cp-brochure__page span { display: block; font-size: 16px; font-weight: 600; padding: 15px 18px; }
+				.cp-brochure__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; margin-top: 34px; }
+				.cp-brochure__download { background: #a70062; color: #fff !important; display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .08em; padding: 15px 24px; text-decoration: none; text-transform: uppercase; }
+				.cp-brochure__contact { color: #554a4f; font-size: 15px; }
+				.cp-brochure__contact a { color: #a70062; }
+				@media (max-width: 860px) { .cp-brochure__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cp-brochure__pages { grid-template-columns: 1fr; margin: 0 auto; max-width: 620px; } }
+				@media (max-width: 480px) { .cp-brochure { padding: 52px 18px; } .cp-brochure__facts { grid-template-columns: 1fr 1fr; } .cp-brochure__fact { padding: 20px 10px; } }
+			</style>
+			<div class="cp-brochure__inner">
+				<div class="cp-brochure__heading">
+					<span class="cp-brochure__eyebrow">Banquet brochure</span>
+					<h2 id="cp-brochure-title">Plan your celebration</h2>
+					<p>Explore our banquet spaces, floor plans and seating capacities, then download the complete 15-page brochure for your event planning.</p>
+				</div>
+				<div class="cp-brochure__facts" aria-label="Banquet highlights">
+					<div class="cp-brochure__fact"><strong>12</strong><span>banquet venues</span></div>
+					<div class="cp-brochure__fact"><strong>30,000</strong><span>sq ft banqueting area</span></div>
+					<div class="cp-brochure__fact"><strong>120+</strong><span>experienced chefs</span></div>
+					<div class="cp-brochure__fact"><strong>20,000+</strong><span>weddings organised</span></div>
+				</div>
+				<div class="cp-brochure__pages">
+					<a class="cp-brochure__page" href="/assets/banquet-brochure/centre-point-banquet-brochure.pdf#page=1" target="_blank" rel="noopener">
+						<img src="/assets/banquet-brochure/brochure-cover.png" width="1684" height="1192" alt="Centre Point Nagpur banquet brochure cover and contact details">
+						<span>Brochure and contact details</span>
+					</a>
+					<a class="cp-brochure__page" href="/assets/banquet-brochure/centre-point-banquet-brochure.pdf#page=4" target="_blank" rel="noopener">
+						<img src="/assets/banquet-brochure/banquet-overview.png" width="1684" height="1192" alt="Centre Point Nagpur banquet overview">
+						<span>Banquet overview</span>
+					</a>
+					<a class="cp-brochure__page" href="/assets/banquet-brochure/centre-point-banquet-brochure.pdf#page=15" target="_blank" rel="noopener">
+						<img src="/assets/banquet-brochure/seating-capacity-guide.png" width="1684" height="1192" alt="Reception, cluster, theatre and classroom seating capacity guide">
+						<span>Seating capacity guide</span>
+					</a>
+				</div>
+				<div class="cp-brochure__actions">
+					<a class="cp-brochure__download" href="/assets/banquet-brochure/centre-point-banquet-brochure.pdf" download>Download full brochure</a>
+					<span class="cp-brochure__contact">Banquet enquiries: <a href="tel:+917126699137">0712-6699137</a> / 124 · <a href="mailto:banquets.nagpur@cpgh.in">banquets.nagpur@cpgh.in</a></span>
+				</div>
+			</div>
+		</section>
+		<section class="elementor-section elementor-top-section elementor-element elementor-element-dc725e0 elementor-section-boxed elementor-section-height-default elementor-section-height-default" data-id="dc725e0" data-element_type="section" data-settings="{&quot;hoteller_ext_is_background_parallax&quot;:&quot;false&quot;,&quot;hoteller_ext_is_background_on_scroll&quot;:&quot;false&quot;,&quot;ekit_has_onepagescroll_dot&quot;:&quot;yes&quot;}">
 						<div class="elementor-container elementor-column-gap-default">
 					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-299bbfe" data-id="299bbfe" data-element_type="column" data-settings="{&quot;hoteller_ext_link_sidemenu&quot;:&quot;false&quot;,&quot;hoteller_ext_link_fullmenu&quot;:&quot;false&quot;,&quot;hoteller_ext_link_closed_fullmenu&quot;:&quot;false&quot;,&quot;hoteller_ext_is_scrollme&quot;:&quot;false&quot;,&quot;hoteller_ext_is_smoove&quot;:&quot;false&quot;,&quot;hoteller_ext_is_parallax_mouse&quot;:&quot;false&quot;,&quot;hoteller_ext_is_infinite&quot;:&quot;false&quot;,&quot;hoteller_ext_is_fadeout_animation&quot;:&quot;false&quot;,&quot;hoteller_ext_mobile_static&quot;:&quot;false&quot;}">
 			<div class="elementor-widget-wrap elementor-element-populated">
