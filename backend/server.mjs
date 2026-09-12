@@ -10,7 +10,7 @@ import { getDb, isConfigured, dbHealth, closeDb } from './db.mjs';
 const brotli = promisify(zlib.brotliCompress);
 const gzip = promisify(zlib.gzip);
 
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript', '.mjs': 'application/javascript', '.json': 'application/json', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.gif': 'image/gif', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'application/javascript', '.mjs': 'application/javascript', '.json': 'application/json', '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.avif': 'image/avif', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.gif': 'image/gif', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.xml', '.txt', '.ttf']);
 const IMMUTABLE = /\.(css|js|mjs|woff2?|ttf|eot|otf|jpe?g|png|webp|avif|gif|svg|ico|mp4|webm)$/i;
 const NEVER_CACHE = new Set(['/runtime-config.js', '/api-client.js', '/forms.js']);

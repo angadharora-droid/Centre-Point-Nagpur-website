@@ -54,6 +54,18 @@ test('static responses compress and carry caching headers', async t => {
   assert.equal(await photo.text(), 'jpeg');
 });
 
+test('serves PDF brochures with the browser-readable content type', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'cp-pdf-'));
+  await writeFile(path.join(root, 'brochure.pdf'), '%PDF-1.7\n');
+  const server = createSiteServer({ staticDir: root });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/brochure.pdf`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'application/pdf');
+});
+
 test('health reports db state; storage is unconfigured without MONGODB_URI', async t => {
   const base = await start(t);
   const health = await (await fetch(`${base}/api/health`)).json();
