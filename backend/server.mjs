@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import zlib from 'node:zlib';
 import { promisify } from 'node:util';
+import { ObjectId } from 'mongodb';
 import { getDb, isConfigured, dbHealth, closeDb } from './db.mjs';
 
 const brotli = promisify(zlib.brotliCompress);
@@ -82,12 +83,50 @@ export function validateEnquiry(payload) {
   return { data, errors };
 }
 
+const ENQUIRY_STATUSES = ['new', 'contacted', 'confirmed', 'closed'];
+
+// Every /api/enquiries/:id route shares this check; a wrong or missing token
+// gets the same 401 whether the id turns out to be valid or not.
+function requireAdmin(req, config) {
+  const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  return Boolean(config.adminToken) && token === config.adminToken;
+}
+
 async function handleApi(req, res, pathname, config) {
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.writeHead(204);
     return res.end();
+  }
+
+  const enquiryId = pathname.match(/^\/api\/enquiries\/([^/]+)$/)?.[1];
+  if (enquiryId && ['PATCH', 'DELETE'].includes(req.method)) {
+    if (!requireAdmin(req, config)) return json(res, 401, { error: 'Unauthorized' });
+    if (!isConfigured()) return json(res, 503, { error: 'Enquiry storage is not configured' });
+    if (!ObjectId.isValid(enquiryId)) return json(res, 400, { error: 'Invalid enquiry id' });
+    // oxlint's type-aware check flags this against the deprecated numeric-id
+    // overload; enquiryId is validated as a hex string above and matches the
+    // current constructor(inputId: string) overload instead.
+    // oxlint-disable-next-line typescript/no-deprecated
+    const _id = new ObjectId(enquiryId);
+    try {
+      if (req.method === 'DELETE') {
+        const result = await getDb().then(db => db.collection('enquiries').deleteOne({ _id }));
+        if (!result.deletedCount) return json(res, 404, { error: 'Enquiry not found' });
+        return json(res, 200, { ok: true });
+      }
+      let payload;
+      try { payload = await readJson(req); }
+      catch (error) { return json(res, error.status || 400, { error: error.message }); }
+      if (!ENQUIRY_STATUSES.includes(payload.status)) return json(res, 422, { error: `status must be one of ${ENQUIRY_STATUSES.join(', ')}` });
+      const result = await getDb().then(db => db.collection('enquiries').updateOne({ _id }, { $set: { status: payload.status, updatedAt: new Date() } }));
+      if (!result.matchedCount) return json(res, 404, { error: 'Enquiry not found' });
+      return json(res, 200, { ok: true });
+    } catch (error) {
+      console.error('enquiry update failed:', error.message);
+      return json(res, 502, { error: 'Could not update the enquiry, please try again' });
+    }
   }
 
   if (pathname === '/api/health' && req.method === 'GET') {
@@ -118,10 +157,9 @@ async function handleApi(req, res, pathname, config) {
   }
 
   if (pathname === '/api/enquiries' && req.method === 'GET') {
-    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-    if (!config.adminToken || token !== config.adminToken) return json(res, 401, { error: 'Unauthorized' });
+    if (!requireAdmin(req, config)) return json(res, 401, { error: 'Unauthorized' });
     if (!isConfigured()) return json(res, 503, { error: 'Enquiry storage is not configured' });
-    const limit = Math.min(Number(new URL(req.url, 'http://localhost').searchParams.get('limit')) || 50, 200);
+    const limit = Math.min(Number(new URL(req.url, 'http://localhost').searchParams.get('limit')) || 50, 500);
     try {
       const items = await getDb().then(db => db.collection('enquiries').find().sort({ createdAt: -1 }).limit(limit).toArray());
       return json(res, 200, { count: items.length, items });

@@ -41,8 +41,16 @@ test('SEO preserves every page body, inline style and original stylesheet refere
     }
   }
   await walk('site');
-  assert.equal(pages, 36);
+  assert.equal(pages, 37); // 36 captured hotel pages + the staff-only /admin/ dashboard
   assert.equal(indexed, 34);
+});
+
+test('the staff admin dashboard is titled for its purpose and never indexed', () => {
+  const html = '<html><head><title>x</title></head><body></body></html>';
+  const { html: out, indexable } = optimizePage(html, '/admin/', settings);
+  assert.equal(indexable, false);
+  assert.match(out, /<title>Enquiries — Staff<\/title>/);
+  assert.match(out, /name="robots" content="noindex,follow"/);
 });
 
 test('production domain validation and preview indexing', () => {

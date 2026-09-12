@@ -10,7 +10,10 @@ the static site and serves it together with a small JSON API from the same origi
   the homepage booking widget.
 - A working **event-enquiry form**: the captured WPForms form on the banquet /
   event pages submits to `POST /api/enquiries` and stores each enquiry in MongoDB.
-- `GET /api/health` and an admin-only `GET /api/enquiries` reader.
+- A staff **enquiries dashboard** at `/admin/` — search, filter, change status
+  and delete enquiries. Gated by the same admin token, entered once and kept
+  in the browser's local storage.
+- `GET /api/health` and an admin-only `GET/PATCH/DELETE /api/enquiries` reader.
 - No payment or room-booking endpoints (rooms book through Swiftbook). WordPress
   admin and one large external video are not reproduced.
 
@@ -25,8 +28,9 @@ the static site and serves it together with a small JSON API from the same origi
      (Allow-list `0.0.0.0/0` in MongoDB Atlas → Network Access — Railway egress
      IPs are not static.)
    - `MONGODB_DB` — database name (defaults to `centrepoint`).
-   - `ADMIN_TOKEN` — a long random string; required as `Authorization: Bearer …`
-     to read `GET /api/enquiries`.
+   - `ADMIN_TOKEN` — a long random string. Required as `Authorization: Bearer …`
+     for `GET/PATCH/DELETE /api/enquiries`, and it's the key staff enter once at
+     `https://YOUR-DOMAIN/admin/` (kept in that browser's local storage after).
    - `PUBLIC_SITE_URL` — optional. SEO defaults to `https://centrepointnagpur.com`;
      set this only to point canonical links / the sitemap at a different host.
    - `PUBLIC_API_BASE_URL`, `FRONTEND_ORIGINS` — leave unset. The frontend calls
@@ -46,10 +50,15 @@ pages build `noindex` automatically.
 | --- | --- |
 | `GET /api/health` | Service status and MongoDB connectivity. |
 | `POST /api/enquiries` | Submit an event enquiry (JSON). Validates name, email, phone, event type, date, guests and meals; a filled `company` field is treated as spam and silently dropped. |
-| `GET /api/enquiries?limit=50` | List recent enquiries, newest first. Requires `Authorization: Bearer $ADMIN_TOKEN`. |
+| `GET /api/enquiries?limit=50` | List recent enquiries, newest first (max 500). Requires the admin token. |
+| `PATCH /api/enquiries/:id` | Set `{"status"}` to one of `new`, `contacted`, `confirmed`, `closed`. Requires the admin token. |
+| `DELETE /api/enquiries/:id` | Remove one enquiry. Requires the admin token. |
 
 Enquiries are stored in the `enquiries` collection with `status: "new"`, a
-timestamp, and the submitter's user agent and IP.
+timestamp, and the submitter's user agent and IP. `/admin/` is a plain,
+dependency-free HTML page (no build step) that calls these endpoints directly;
+it's excluded from the sitemap and served `noindex`, but — like the API — its
+only real protection is the admin token, so treat that token like a password.
 
 ## Performance
 

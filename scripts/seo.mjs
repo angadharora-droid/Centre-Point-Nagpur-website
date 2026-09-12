@@ -64,10 +64,14 @@ export function seoSettings(env = process.env) {
   return { origin, indexable: production };
 }
 
+// Internal tool, not a hotel page: never indexed regardless of the labels map,
+// and titled for the person using it rather than for search results.
+const STAFF_ONLY = new Set(['/admin/']);
+
 export function optimizePage(html, route, settings) {
   const label = labels[route];
-  const indexable = settings.indexable && Boolean(label);
-  const title = route === '/' ? `${brand} | Rooms, Dining & Banquets` : `${label || 'Page'} | ${brand}`;
+  const indexable = settings.indexable && Boolean(label) && !STAFF_ONLY.has(route);
+  const title = route === '/' ? `${brand} | Rooms, Dining & Banquets` : STAFF_ONLY.has(route) ? 'Enquiries — Staff' : `${label || 'Page'} | ${brand}`;
   const description = descriptions[route] || (label ? `Explore ${label} at ${brand} in Ramdaspeth. View details and photographs, and contact the hotel to plan your visit.` : 'Additional information from Centre Point Hotel Nagpur.');
   const canonical = settings.origin ? new URL(route, settings.origin).href : '';
   const imagePath = '/wp-content/uploads/2024/08/DSC09123-min-scaled.jpg';

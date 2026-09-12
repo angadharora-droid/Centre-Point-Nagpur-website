@@ -91,6 +91,23 @@ test('GET /api/enquiries requires the admin token', async t => {
   assert.equal((await fetch(`${base}/api/enquiries`, { headers: { Authorization: 'Bearer secret' } })).status, 503);
 });
 
+test('PATCH/DELETE /api/enquiries/:id require the admin token first, then a real id', async t => {
+  const base = await start(t, { adminToken: 'secret' });
+  const fakeId = '507f1f77bcf86cd799439011';
+
+  assert.equal((await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'PATCH' })).status, 401);
+  assert.equal((await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'DELETE' })).status, 401);
+  assert.equal((await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'PATCH', headers: { Authorization: 'Bearer wrong' } })).status, 401);
+
+  // Correct token, but storage still unconfigured in this test environment:
+  assert.equal((await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'PATCH', headers: { Authorization: 'Bearer secret' } })).status, 503);
+  assert.equal((await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'DELETE', headers: { Authorization: 'Bearer secret' } })).status, 503);
+
+  const options = await fetch(`${base}/api/enquiries/${fakeId}`, { method: 'OPTIONS' });
+  assert.match(options.headers.get('access-control-allow-methods'), /PATCH/);
+  assert.match(options.headers.get('access-control-allow-methods'), /DELETE/);
+});
+
 test('enquiry validation', () => {
   const bad = validateEnquiry({ name: 'X', email: 'not-an-email' });
   assert.deepEqual(Object.keys(bad.errors).sort(), ['email', 'eventDate', 'eventType', 'guests', 'meals', 'name', 'phone']);

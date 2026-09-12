@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Enquiries — Staff</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --accent: #a70062;
+    --accent-dark: #7d004a;
+    --ink: #2b2320;
+    --muted: #7a6f68;
+    --line: #e7ded4;
+    --bg: #f6f1ea;
+    --card: #ffffff;
+    --new: #b3261e;
+    --contacted: #9a6b00;
+    --confirmed: #2e7d32;
+    --closed: #6b6259;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  a { color: var(--accent); }
+
+  /* ---- gate ---- */
+  #gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  #gate.hidden { display: none; }
+  .gate-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(43,35,32,0.08);
+  }
+  .gate-card h1 { font-size: 18px; margin: 0 0 4px; }
+  .gate-card p { color: var(--muted); margin: 0 0 20px; font-size: 13px; }
+  .gate-card input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+  .gate-card input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .gate-card button {
+    width: 100%;
+    padding: 11px 12px;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .gate-card button:disabled { opacity: .6; cursor: default; }
+  .gate-error { color: var(--new); font-size: 13px; margin-top: 12px; min-height: 16px; }
+
+  /* ---- app ---- */
+  #app.hidden { display: none; }
+  header.bar {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  header.bar h1 { font-size: 17px; margin: 0; flex: 1 1 auto; }
+  header.bar .meta { color: var(--muted); font-size: 12px; }
+  header.bar button, .toolbar button {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  header.bar button:hover, .toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 20px 60px; }
+
+  .toolbar {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 16px;
+  }
+  .toolbar input[type=search], .toolbar select {
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--card);
+  }
+  .toolbar input[type=search] { flex: 1 1 220px; min-width: 0; }
+  .toolbar select { flex: 0 0 auto; }
+  .counts { color: var(--muted); font-size: 13px; margin-left: auto; white-space: nowrap; }
+
+  #status-line { color: var(--muted); font-size: 13px; padding: 30px 0; text-align: center; }
+  #status-line.error { color: var(--new); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .card .date { font-size: 12px; color: var(--muted); }
+  .badge {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em;
+    padding: 2px 8px; border-radius: 999px; color: #fff; white-space: nowrap;
+  }
+  .badge.new { background: var(--new); }
+  .badge.contacted { background: var(--contacted); }
+  .badge.confirmed { background: var(--confirmed); }
+  .badge.closed { background: var(--closed); }
+
+  .card .name { font-size: 16px; font-weight: 700; margin: 0 0 4px; word-break: break-word; }
+  .card .contact { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+  .card .contact a { color: inherit; text-decoration: none; }
+  .card .contact a:hover { text-decoration: underline; }
+  .card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 13px; margin: 0 0 8px; }
+  .card dl dt { color: var(--muted); }
+  .card dl dd { margin: 0; word-break: break-word; }
+  .card .message {
+    font-size: 13px; background: var(--bg); border-radius: 8px; padding: 9px 10px;
+    margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; cursor: pointer;
+  }
+  .card .foot { display: flex; align-items: center; gap: 8px; }
+  .card .foot select {
+    flex: 1 1 auto; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px; font-size: 13px;
+  }
+  .card .foot button {
+    background: transparent; border: 1px solid var(--line); color: var(--new);
+    border-radius: 7px; padding: 7px 10px; font-size: 13px; cursor: pointer;
+  }
+  .card .foot button:hover { background: var(--new); color: #fff; border-color: var(--new); }
+  .card .source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  @media (max-width: 480px) {
+    header.bar h1 { flex-basis: 100%; }
+    .counts { margin-left: 0; flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <form class="gate-card" id="gate-form">
+    <h1>Staff sign-in</h1>
+    <p>Enter the admin key to view enquiries.</p>
+    <input type="password" id="gate-key" placeholder="Admin key" autocomplete="current-password" autofocus required>
+    <button type="submit" id="gate-submit">Unlock</button>
+    <div class="gate-error" id="gate-error"></div>
+  </form>
+</div>
+
+<div id="app" class="hidden">
+  <header class="bar">
+    <h1>Enquiries</h1>
+    <span class="meta" id="updated-meta"></span>
+    <button type="button" id="refresh-btn">Refresh</button>
+    <button type="button" id="logout-btn">Sign out</button>
+  </header>
+  <main>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="Search name, email, phone, message…">
+      <select id="status-filter">
+        <option value="">All statuses</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="closed">Closed</option>
+      </select>
+      <span class="counts" id="counts"></span>
+    </div>
+    <div id="status-line"></div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const TOKEN_KEY = 'cp_admin_token';
+  const STATUSES = ['new', 'contacted', 'confirmed', 'closed'];
+  const gate = document.getElementById('gate');
+  const app = document.getElementById('app');
+  const gateForm = document.getElementById('gate-form');
+  const gateKey = document.getElementById('gate-key');
+  const gateError = document.getElementById('gate-error');
+  const gateSubmit = document.getElementById('gate-submit');
+  const grid = document.getElementById('grid');
+  const statusLine = document.getElementById('status-line');
+  const search = document.getElementById('search');
+  const statusFilter = document.getElementById('status-filter');
+  const counts = document.getElementById('counts');
+  const updatedMeta = document.getElementById('updated-meta');
+
+  let token = '';
+  let items = [];
+  let pollTimer = null;
+
+  function authHeaders() { return { Authorization: 'Bearer ' + token }; }
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
+    if (response.status === 401) { signOut('Session expired — enter the admin key again.'); throw new Error('unauthorized'); }
+    return response;
+  }
+
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+    catch { return iso || ''; }
+  }
+
+  function badge(status) {
+    const el = document.createElement('span');
+    el.className = 'badge ' + (STATUSES.includes(status) ? status : 'new');
+    el.textContent = STATUSES.includes(status) ? status : 'new';
+    return el;
+  }
+
+  function field(dl, label, value) {
+    if (!value) return;
+    const dt = document.createElement('dt'); dt.textContent = label;
+    const dd = document.createElement('dd'); dd.textContent = value;
+    dl.append(dt, dd);
+  }
+
+  function renderCard(item) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const row1 = document.createElement('div'); row1.className = 'row1';
+    const date = document.createElement('span'); date.className = 'date'; date.textContent = fmtDate(item.createdAt);
+    row1.append(date, badge(item.status));
+    card.append(row1);
+
+    const name = document.createElement('p'); name.className = 'name'; name.textContent = item.name || '(no name)';
+    card.append(name);
+
+    const contact = document.createElement('div'); contact.className = 'contact';
+    if (item.phone) {
+      const tel = document.createElement('a'); tel.href = 'tel:' + item.phone.replace(/[^\d+]/g, ''); tel.textContent = item.phone;
+      contact.append(tel);
+    }
+    if (item.phone && item.email) contact.append(document.createTextNode(' · '));
+    if (item.email) {
+      const mail = document.createElement('a'); mail.href = 'mailto:' + item.email; mail.textContent = item.email;
+      contact.append(mail);
+    }
+    card.append(contact);
+
+    const dl = document.createElement('dl');
+    field(dl, 'Event', item.eventType);
+    field(dl, 'Date', item.eventDate);
+    field(dl, 'Guests', item.guests);
+    field(dl, 'Meals', item.meals);
+    if (dl.children.length) card.append(dl);
+
+    if (item.message) {
+      const msg = document.createElement('div'); msg.className = 'message';
+      const short = item.message.length > 160;
+      msg.textContent = short ? item.message.slice(0, 160) + '…' : item.message;
+      if (short) {
+        let expanded = false;
+        msg.addEventListener('click', () => {
+          expanded = !expanded;
+          msg.textContent = expanded ? item.message : item.message.slice(0, 160) + '…';
+        });
+        msg.title = 'Click to expand';
+        msg.style.cursor = 'pointer';
+      }
+      card.append(msg);
+    }
+
+    const foot = document.createElement('div'); foot.className = 'foot';
+    const select = document.createElement('select');
+    for (const s of STATUSES) {
+      const opt = document.createElement('option'); opt.value = s; opt.textContent = s[0].toUpperCase() + s.slice(1);
+      if (s === item.status) opt.selected = true;
+      select.append(opt);
+    }
+    select.addEventListener('change', async () => {
+      const previous = item.status;
+      select.disabled = true;
+      try {
+        const response = await api('/api/enquiries/' + item._id, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: select.value }),
+        });
+        if (!response.ok) throw new Error();
+        item.status = select.value;
+        row1.replaceChild(badge(item.status), row1.lastChild);
+      } catch { select.value = previous; alert('Could not update status. Please try again.'); }
+      finally { select.disabled = false; }
+    });
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'Delete';
+    del.addEventListener('click', async () => {
+      if (!confirm('Delete this enquiry from ' + (item.name || 'this contact') + '? This cannot be undone.')) return;
+      del.disabled = true;
+      try {
+        const response = await api('/api/enquiries/' + item._id, { method: 'DELETE' });
+        if (!response.ok) throw new Error();
+        items = items.filter(entry => entry._id !== item._id);
+        renderList();
+      } catch { alert('Could not delete the enquiry. Please try again.'); del.disabled = false; }
+    });
+    foot.append(select, del);
+    card.append(foot);
+
+    if (item.page) {
+      const source = document.createElement('div'); source.className = 'source'; source.textContent = 'From ' + item.page;
+      card.append(source);
+    }
+    return card;
+  }
+
+  function renderList() {
+    const term = search.value.trim().toLowerCase();
+    const statusWanted = statusFilter.value;
+    const filtered = items.filter(item => {
+      if (statusWanted && item.status !== statusWanted) return false;
+      if (!term) return true;
+      return ['name', 'email', 'phone', 'message', 'eventType', 'page'].some(key => (item[key] || '').toLowerCase().includes(term));
+    });
+    grid.replaceChildren(...filtered.map(renderCard));
+    const newCount = items.filter(item => item.status === 'new' || !item.status).length;
+    counts.textContent = filtered.length === items.length
+      ? `${items.length} enquir${items.length === 1 ? 'y' : 'ies'} · ${newCount} new`
+      : `${filtered.length} of ${items.length} shown`;
+    statusLine.textContent = filtered.length ? '' : (items.length ? 'No enquiries match your filters.' : 'No enquiries yet.');
+    statusLine.classList.remove('error');
+  }
+
+  async function loadEnquiries({ silent = false } = {}) {
+    if (!silent) statusLine.textContent = 'Loading…';
+    try {
+      const response = await api('/api/enquiries?limit=500');
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Could not load enquiries');
+      const body = await response.json();
+      items = body.items || [];
+      renderList();
+      updatedMeta.textContent = 'Updated ' + new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    } catch (error) {
+      if (error.message !== 'unauthorized') {
+        statusLine.textContent = error.message || 'Could not load enquiries.';
+        statusLine.classList.add('error');
+      }
+    }
+  }
+
+  function showApp() {
+    gate.classList.add('hidden');
+    app.classList.remove('hidden');
+    loadEnquiries();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(() => { if (document.visibilityState === 'visible') loadEnquiries({ silent: true }); }, 60000);
+  }
+
+  function signOut(message) {
+    token = '';
+    localStorage.removeItem(TOKEN_KEY);
+    clearInterval(pollTimer);
+    app.classList.add('hidden');
+    gate.classList.remove('hidden');
+    gateError.textContent = message || '';
+    gateKey.value = '';
+    gateKey.focus();
+  }
+
+  async function tryToken(candidate) {
+    gateError.textContent = '';
+    gateSubmit.disabled = true;
+    gateSubmit.textContent = 'Checking…';
+    token = candidate;
+    try {
+      const response = await fetch('/api/enquiries?limit=1', { headers: authHeaders() });
+      if (response.status === 401) { gateError.textContent = 'Incorrect admin key.'; token = ''; localStorage.removeItem(TOKEN_KEY); return; }
+      if (!response.ok) { gateError.textContent = 'Could not reach the server. Please try again.'; token = ''; return; }
+      localStorage.setItem(TOKEN_KEY, candidate);
+      showApp();
+    } catch { gateError.textContent = 'Network error. Please try again.'; token = ''; }
+    finally { gateSubmit.disabled = false; gateSubmit.textContent = 'Unlock'; }
+  }
+
+  gateForm.addEventListener('submit', event => { event.preventDefault(); tryToken(gateKey.value.trim()); });
+  document.getElementById('logout-btn').addEventListener('click', () => signOut());
+  document.getElementById('refresh-btn').addEventListener('click', () => loadEnquiries());
+  search.addEventListener('input', renderList);
+  statusFilter.addEventListener('change', renderList);
+
+  const saved = localStorage.getItem(TOKEN_KEY);
+  if (saved) tryToken(saved); else gateKey.focus();
+})();
+</script>
+
+</body>
+</html>
