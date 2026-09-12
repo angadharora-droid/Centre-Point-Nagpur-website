@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en-US"  data-menu="leftalign">
 <head>
+	<link rel="stylesheet" href="/assets/banquet-brochure/venue-layout.css">
 
 <link rel="profile" href="http://gmpg.org/xfn/11" />
 <link rel="pingback" href="https://centrepointnagpur.com/xmlrpc.php" />
@@ -1143,43 +1144,6 @@ body .mphb-reserve-room-section .mphb-rooms-quantity-wrapper:after {
       margin: 0;
     }
 
-    /* Fullscreen modal for image */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 999;
-      padding-top: 60px;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0, 0, 0, 0.9);
-    }
-
-    .modal-content {
-      margin: auto;
-      display: block;
-      max-width: 90%;
-      max-height: 85vh;
-      border-radius: 10px;
-    }
-
-    .close {
-      position: absolute;
-      top: 20px;
-      right: 35px;
-      color: #fff;
-      font-size: 40px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: color 0.3s ease;
-    }
-
-    .close:hover {
-      color: #ccc;
-    }
-
     @media (max-width: 768px) {
       .container {
         padding: 30px 15px;
@@ -1197,7 +1161,7 @@ body .mphb-reserve-room-section .mphb-rooms-quantity-wrapper:after {
   </style>
 <meta name="robots" content="noindex,nofollow"></head>
 <body>
-  <div class="container">
+  <div class="container cp-venue-detail">
     <!-- Top Headline and Body -->
     <h1>Palacio Hall — One of the Biggest in Central India</h1>
     <h2>Unparalleled Service for a Memorable Experience</h2>
@@ -1208,7 +1172,9 @@ body .mphb-reserve-room-section .mphb-rooms-quantity-wrapper:after {
     <!-- Below Section: Image and Facilities -->
     <div class="content-section">
       <div class="image-section">
-        <img decoding="async" id="palacioImage" src="/wp-content/uploads/2025/11/Palacio-1.jpg" alt="Palacio Hall">
+        <a href="/assets/banquet-brochure/centre-point-banquet-brochure.pdf#page=5" target="_blank" rel="noopener" aria-label="Open the Palacio floor plan and capacity page in the banquet brochure">
+          <img decoding="async" id="palacioImage" src="/assets/banquet-brochure/venues/palacio.png" width="1684" height="1192" alt="Palacio floor plan, hall photographs and seating capacities">
+        </a>
       </div>
 
       <div class="facilities">
@@ -1227,33 +1193,6 @@ body .mphb-reserve-room-section .mphb-rooms-quantity-wrapper:after {
     </div>
   </div>
 
-  <!-- Fullscreen Modal -->
-  <div id="imageModal" class="modal">
-    <span class="close">&times;</span>
-    <img class="modal-content" id="modalImg">
-  </div>
-
-  <script>
-    const modal = document.getElementById("imageModal");
-    const img = document.getElementById("palacioImage");
-    const modalImg = document.getElementById("modalImg");
-    const closeBtn = document.getElementsByClassName("close")[0];
-
-    img.onclick = function() {
-      modal.style.display = "block";
-      modalImg.src = this.src;
-    }
-
-    closeBtn.onclick = function() {
-      modal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-      if (event.target == modal) {
-        modal.style.display = "none";
-      }
-    }
-  </script>
 </body>
 </html>
 				</div>
