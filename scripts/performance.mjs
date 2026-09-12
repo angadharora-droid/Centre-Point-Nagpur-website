@@ -52,9 +52,11 @@ export function rewriteImages(html, images, isCss = false) {
   });
   if (!isCss) html = html.replace(/<style\b([^>]*)>([\s\S]*?)<\/style>/gi, (_, attrs, css) => `<style${attrs}>${rewriteImages(css, images, true)}</style>`);
   return html.replace(/<img\b[^>]*>/gi, tag => {
-    const src = tag.match(/\ssrc=(["'])(.*?)\1/i)?.[2];
-    const variants = byUrl.get(src);
+    const srcMatch = tag.match(/\ssrc=(["'])(.*?)\1/i);
+    const src = srcMatch?.[2];
+    const variants = images.get(src) || byUrl.get(src);
     if (!variants) return tag;
+    if (images.has(src)) tag = tag.replace(srcMatch[0], ` src=${srcMatch[1]}${variants.at(-1).url}${srcMatch[1]}`);
     // Replace captured srcsets, whose descriptors may refer to the old sizes.
     tag = tag.replace(/\s(?:srcset|sizes)=(["']).*?\1/gi, '');
     const set = variants.map(v => `${v.url} ${v.width}w`).join(', ');

@@ -16,10 +16,12 @@ void test('deferred scripts retain dependency order and leave data scripts intac
 });
 
 void test('images use explicit WebP with accurate width descriptors and fallback sizes', () => {
-  const map = new Map([['/wp-content/hero.jpg', [{width:480,url:'/assets/s.webp'},{width:1280,url:'/assets/l.webp'}]]]);
-  const out = rewriteImages('<img src="/wp-content/hero.jpg" srcset="/wp-content/old.jpg 2560w"><style>.hero{background:url(/wp-content/hero.jpg)}</style>', map);
+  const variants = [{width:480,url:'/assets/s.webp'},{width:1280,url:'/assets/l.webp'}];
+  const map = new Map([['/wp-content/hero.jpg', variants], ['/assets/brochure.png', variants]]);
+  const out = rewriteImages('<img src="/wp-content/hero.jpg" srcset="/wp-content/old.jpg 2560w"><img src="/assets/brochure.png"><style>.hero{background:url(/wp-content/hero.jpg)}</style>', map);
   assert.match(out, /src="\/assets\/l.webp"/);
   assert.match(out, /srcset="\/assets\/s.webp 480w, \/assets\/l.webp 1280w"/);
+  assert.ok(!out.includes('/assets/brochure.png'));
   assert.ok(!out.includes('2560w'));
   assert.match(out, /background:url\(\/assets\/l.webp\)/);
 });
