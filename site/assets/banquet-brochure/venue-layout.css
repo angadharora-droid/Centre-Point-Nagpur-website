@@ -14,16 +14,13 @@
 }
 
 .cp-venue-detail .image-section {
-  min-width: 0;
-  width: auto !important;
-}
-
-.cp-venue-detail .image-section a {
   background: #fff;
   border-radius: 24px;
   box-shadow: 0 12px 32px rgba(47, 29, 38, .15);
-  display: block;
+  cursor: default;
+  min-width: 0;
   overflow: hidden;
+  width: auto !important;
 }
 
 .cp-venue-detail .image-section img {
@@ -32,13 +29,7 @@
   display: block;
   height: auto;
   max-width: none !important;
-  transition: transform .25s ease !important;
   width: 100% !important;
-}
-
-.cp-venue-detail .image-section a:hover img,
-.cp-venue-detail .image-section a:focus-visible img {
-  transform: scale(1.018);
 }
 
 .cp-venue-detail .facilities {
@@ -78,7 +69,7 @@
     margin-top: 34px;
   }
 
-  .cp-venue-detail .image-section a {
+  .cp-venue-detail .image-section {
     border-radius: 14px;
   }
 }
