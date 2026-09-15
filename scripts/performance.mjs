@@ -88,6 +88,35 @@ export async function deferScripts(html, root) {
   return out + html.slice(last);
 }
 
+// The loftloader plugin covers the whole page with a near-opaque black overlay
+// until window.load fires (every image, font and iframe, including the footer's
+// Google Maps embed), then fades it out. It adds no functionality and was the
+// single biggest driver of poor mobile LCP, so it is stripped unconditionally.
+function removeBalancedDiv(html, openTagRegex) {
+  const open = html.match(openTagRegex);
+  if (!open) return html;
+  const start = open.index;
+  const tagRe = /<(\/?)div\b[^>]*?(\/?)>/gi;
+  tagRe.lastIndex = start + open[0].length;
+  let depth = 1;
+  let match;
+  while ((match = tagRe.exec(html))) {
+    if (match[2] === '/') continue; // self-closed, e.g. <div/>
+    depth += match[1] === '/' ? -1 : 1;
+    if (depth === 0) return html.slice(0, start) + html.slice(tagRe.lastIndex);
+  }
+  return html; // unbalanced markup: leave untouched rather than corrupt the page
+}
+
+export function removeLoader(html) {
+  html = html
+    .replace(/\s*<link\b[^>]*\bhref=["'][^"']*\/plugins\/loftloader\/[^"']*["'][^>]*>/gi, '')
+    .replace(/\s*<script\b[^>]*\bsrc=["'][^"']*\/plugins\/loftloader\/[^"']*["'][^>]*>\s*<\/script>/gi, '')
+    .replace(/\s*<style\b[^>]*\bid=["']loftloader-lite-custom-[^"']*["'][^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/\bloftloader-lite-enabled\s*/i, '');
+  return removeBalancedDiv(html, /<div id=["']loftloader-wrapper["'][^>]*>/i);
+}
+
 export function removeUnusedPlugins(html) {
   const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
   const unused = [];
