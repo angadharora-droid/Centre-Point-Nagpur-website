@@ -41,7 +41,7 @@ test('SEO preserves every page body, inline style and original stylesheet refere
     }
   }
   await walk('site');
-  assert.equal(pages, 37); // 36 captured hotel pages + the staff-only /admin/ dashboard
+  assert.equal(pages, 35); // 34 captured hotel pages + the staff-only /admin/ dashboard
   assert.equal(indexed, 34);
 });
 

@@ -14,6 +14,11 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg', '.xml', '.txt', '.ttf']);
 const IMMUTABLE = /\.(css|js|mjs|woff2?|ttf|eot|otf|jpe?g|png|webp|avif|gif|svg|ico|mp4|webm)$/i;
 const NEVER_CACHE = new Set(['/runtime-config.js', '/api-client.js', '/forms.js']);
+// WordPress URLs retired from this copy: the injected gambling post, the default
+// "Hello world!" posts, the author archive that listed them, and the MotoPress /
+// WooCommerce booking and shop pages. 410 tells crawlers to drop them now instead
+// of re-checking a 404 for months.
+const GONE = /^\/(?:roulette-with-bonus-free-spins-a-complete-guide|hello-world(?:-2)?|author|search-availability|cart|checkout|my-account|shop|product)(?:\/|$)/;
 
 // Cache compressed copies of text assets, keyed by path + mtime + encoding.
 const encodedCache = new Map();
@@ -257,6 +262,10 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
         if (!res.headersSent) return json(res, 500, { error: 'Internal error' });
         return res.end();
       }
+    }
+    if (GONE.test(pathname)) {
+      res.writeHead(410, { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex', 'Cache-Control': 'public, max-age=3600' });
+      return res.end(req.method === 'HEAD' ? undefined : '<h1>This page has been removed</h1><a href="/">Return home</a>');
     }
     if (!['GET', 'HEAD'].includes(req.method)) {
       res.writeHead(405, { Allow: 'GET, HEAD', 'Cache-Control': 'no-store' });

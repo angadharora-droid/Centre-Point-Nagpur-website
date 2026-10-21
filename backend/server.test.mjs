@@ -23,6 +23,17 @@ test('serves static files and 404s unknown paths', async t => {
   assert.equal((await fetch(`${base}/../../etc/passwd`)).status, 404);
 });
 
+test('retired WordPress and spam URLs answer 410 Gone', async t => {
+  const base = await start(t);
+  for (const route of ['/roulette-with-bonus-free-spins-a-complete-guide/', '/hello-world/', '/hello-world/feed/', '/author/angadh-arora/', '/search-availability/', '/product/reservation/']) {
+    const res = await fetch(base + route);
+    assert.equal(res.status, 410, route);
+    assert.equal(res.headers.get('x-robots-tag'), 'noindex');
+  }
+  assert.equal((await fetch(`${base}/authority/`)).status, 404);
+  assert.equal((await fetch(`${base}/`)).status, 200);
+});
+
 test('static responses compress and carry caching headers', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'cp-cache-'));
   await writeFile(path.join(root, 'index.html'), '<!doctype html><title>Home</title>' + ' padding'.repeat(200));

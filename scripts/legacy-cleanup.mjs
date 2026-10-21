@@ -36,6 +36,13 @@ export function cleanLegacyRuntime(html) {
   if (/\/themes\/[^"']*font-awesome(?:\.min)?\.css/i.test(html)) {
     html = html.replace(/<link\b[^>]*cdnjs\.cloudflare\.com\/ajax\/libs\/font-awesome\/[^>]*>/gi, '');
   }
+  // Elementor HTML widgets paste whole documents into the body, each with its own
+  // <title> (the homepage one reads "Centre Point Hotel | Jabalpur"). Crawlers can
+  // pick those up as the page title; only the real document head keeps one.
+  const headEnd = html.search(/<\/head>/i);
+  if (headEnd >= 0) {
+    html = html.slice(0, headEnd) + html.slice(headEnd).replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, head => head.replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, ''));
+  }
   return html;
 }
 

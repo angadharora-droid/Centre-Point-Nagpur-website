@@ -6,6 +6,15 @@ import {tmpdir} from 'node:os';
 import vm from 'node:vm';
 import {cleanLegacyRuntime, bundleScripts, lazyBooking, dedupeHeadLinks} from '../scripts/legacy-cleanup.mjs';
 
+void test('strips titles from documents pasted into the body, keeping the real title and SVG titles', () => {
+ const html = '<html><head><title>Real</title></head><body><header>x</header><div><!DOCTYPE html><html><head><meta charset="UTF-8" /><title>Centre Point Hotel | Jabalpur</title></head><body><svg><title>Icon</title></svg></body></html></div></body></html>';
+ const out = cleanLegacyRuntime(html);
+ assert.ok(out.includes('<title>Real</title>'));
+ assert.ok(!out.includes('Jabalpur'));
+ assert.ok(out.includes('<svg><title>Icon</title></svg>'));
+ assert.ok(out.includes('<meta charset="UTF-8" />'));
+});
+
 void test('removes obsolete generators and unused Pro runtime without removing styling', () => {
  const html = '<meta name="generator" content="WordPress"><link rel="stylesheet" href="/wp-content/plugins/elementor-pro/style.css"><script src="/wp-content/plugins/elementor-pro/assets/js/frontend.min.js"></script><script id="elementor-pro-frontend-js-before">var elementorProFrontendConfig={}</script>';
  const out=cleanLegacyRuntime(html);
