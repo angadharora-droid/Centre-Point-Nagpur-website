@@ -3,8 +3,8 @@ import { createHash } from 'node:crypto';
 // The site was captured from WordPress, so its files sat under /wp-content/ and
 // /wp-includes/: folder names that plugin-detector extensions read plugin and theme
 // names from. The build moves them to neutral paths and rewrites every reference;
-// the server redirects the old paths (cached stylesheets, image search, link
-// previews) to the new ones. Both sides derive paths from this one function.
+// the server redirects old photo URLs (image search, link previews) to /media.
+// Both sides derive paths from this one function.
 const code = value => createHash('sha256').update(value).digest('hex').slice(0, 8);
 
 // '/wp-content/plugins/elementor/a.js' -> '/static/<code>/a.js'; anything else unchanged.

@@ -5,7 +5,10 @@ import sharp from 'sharp';
 
 export const hash = data => createHash('sha256').update(data).digest('hex').slice(0, 16);
 export async function asset(root, name, extension, body) {
-  const url = `/assets/${name}.${hash(body)}.${extension}`;
+  // The salt renames every asset once. Bundles are hashed before neutraliseWordPressPaths
+  // rewrites them, so without it a browser's immutably cached pre-rewrite copy, still
+  // pointing at /wp-content/, would keep matching the new name.
+  const url = `/assets/${name}.${createHash('sha256').update('neutral-paths\n').update(body).digest('hex').slice(0, 16)}.${extension}`;
   await mkdir(path.join(root, 'assets'), { recursive: true });
   await writeFile(path.join(root, url), body);
   return url;

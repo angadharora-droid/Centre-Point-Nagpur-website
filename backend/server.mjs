@@ -229,9 +229,11 @@ async function serveStatic(req, res, root, pathname) {
     res.writeHead(200, headers);
     res.end(req.method === 'HEAD' ? undefined : body);
   } catch {
-    // The build moved WordPress folders; send old links to the file's new home.
-    const moved = neutralPath(pathname);
-    if (moved !== pathname) {
+    // The build moved WordPress uploads to /media; keep old photo links (image search,
+    // link previews) working. Only for files that exist: answering anything else under
+    // /wp-content/ tells plugin-detector extensions that whatever they probe is installed.
+    const moved = pathname.startsWith('/wp-content/uploads/') ? neutralPath(pathname) : pathname;
+    if (moved !== pathname && (await stat(path.join(root, moved)).catch(() => null))?.isFile()) {
       const query = new URL(req.url, 'http://localhost').search;
       res.writeHead(301, { Location: moved + query, 'Cache-Control': 'public, max-age=86400' });
       return res.end();

@@ -21,7 +21,13 @@ export async function neutraliseWordPressPaths(root) {
   for (const file of await filesIn(root)) {
     if (!/\.(html|css|js|mjs|json|xml|svg|txt)$/.test(file)) continue;
     const text = await readFile(file, 'utf8');
-    const out = rewriteLegacyPaths(text);
+    let out = rewriteLegacyPaths(text);
+    // Theme detectors also read the theme slug off <body class="theme-hoteller"> and
+    // plugin names off inline <style> ids ("hoteller-screen-inline-css"). No stylesheet
+    // or script uses either.
+    if (file.endsWith('.html')) out = out
+      .replace(/(<body\b[^>]*\bclass=["'])([^"']*)/i, (_, open, classes) => open + classes.split(/\s+/).filter(c => !/^(?:theme-|hoteller-input-)/.test(c)).join(' '))
+      .replace(/<style\b([^>]*?)\s+id=(["'])[^"']*\2/gi, '<style$1');
     if (out !== text) await writeFile(file, out);
   }
   return moves.length;

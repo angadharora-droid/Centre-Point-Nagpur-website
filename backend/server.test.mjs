@@ -35,19 +35,25 @@ test('retired WordPress and spam URLs answer 410 Gone', async t => {
   assert.equal((await fetch(`${base}/`)).status, 200);
 });
 
-test('old WordPress file paths redirect to their neutral home; existing files still serve', async t => {
+test('old photo URLs redirect to /media; probes for plugins and themes get a plain 404', async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'cp-legacy-'));
+  await mkdir(path.join(root, 'media/2024'), { recursive: true });
+  await writeFile(path.join(root, 'media/2024/a.jpg'), 'x');
   await mkdir(path.join(root, 'wp-content/uploads'), { recursive: true });
   await writeFile(path.join(root, 'wp-content/uploads/kept.jpg'), 'x');
+  const elementor = neutralPath('/wp-content/plugins/elementor/readme.txt');
+  await mkdir(path.join(root, path.dirname(elementor)), { recursive: true });
+  await writeFile(path.join(root, elementor), 'x');
   const server = createSiteServer({ staticDir: root });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
-  const moved = await fetch(`${base}/wp-content/plugins/elementor/a.js?ver=1`, { redirect: 'manual' });
+  const moved = await fetch(`${base}/wp-content/uploads/2024/a.jpg?ver=1`, { redirect: 'manual' });
   assert.equal(moved.status, 301);
-  assert.equal(moved.headers.get('location'), neutralPath('/wp-content/plugins/elementor/a.js') + '?ver=1');
-  assert.match(moved.headers.get('location'), /^\/static\/[0-9a-f]{8}\/a\.js\?ver=1$/);
-  assert.equal((await fetch(`${base}/wp-content/uploads/gone.jpg`, { redirect: 'manual' })).headers.get('location'), '/media/gone.jpg');
+  assert.equal(moved.headers.get('location'), '/media/2024/a.jpg?ver=1');
+  for (const probe of ['/wp-content/uploads/gone.jpg', '/wp-content/plugins/elementor/readme.txt', '/wp-content/themes/hello-elementor/style.css', '/wp-content/plugins/made-up/readme.txt', '/wp-includes/js/jquery.js']) {
+    assert.equal((await fetch(base + probe, { redirect: 'manual' })).status, 404, probe);
+  }
   assert.equal((await fetch(`${base}/wp-content/uploads/kept.jpg`)).status, 200); // dev server serves raw site/
   assert.equal(await (await fetch(`${base}/ajax`)).text(), '0');
 });
