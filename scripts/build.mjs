@@ -1,4 +1,4 @@
-import { cleanLegacyRuntime, bundleScripts, lazyBooking, dedupeHeadLinks } from './legacy-cleanup.mjs';
+import { cleanLegacyRuntime, bundleScripts, lazyBooking, dedupeHeadLinks, neutraliseWordPressPaths } from './legacy-cleanup.mjs';
 import { applySeo } from './seo.mjs';
 import { bundlePageCss } from './bundle-css.mjs';
 import { prepareImages, rewriteImages, deferScripts, filesIn, removeUnusedPlugins, removeLoader, responsiveBackgroundCss, asset } from './performance.mjs';
@@ -135,6 +135,8 @@ for (const file of (await filesIn('dist')).filter(f => f.endsWith('.html'))) {
 }
 }
 await applySeo('dist');
+// Last, so every earlier step can still recognise plugins by their /wp-content/ paths.
+await neutraliseWordPressPaths('dist');
 // Precompress at build time: first requests never pay the compression cost.
 for (const file of await filesIn('dist')) {
   if (!/\.(html|css|js|mjs|json|svg|xml|txt)$/.test(file)) continue;

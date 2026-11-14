@@ -1,7 +1,31 @@
-import {readFile} from 'node:fs/promises';
+import {mkdir, readFile, readdir, rename, rm, stat, writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import vm from 'node:vm';
-import {asset} from './performance.mjs';
+import {asset, filesIn} from './performance.mjs';
+import {neutralPath, rewriteLegacyPaths} from '../backend/legacy-paths.mjs';
+
+// Move /wp-content/* and /wp-includes to their neutral paths, then rewrite every
+// reference. Safe to rerun: a runtime-only build finds nothing left to move and
+// only rewrites the freshly regenerated SEO head.
+export async function neutraliseWordPressPaths(root) {
+  const moves = [];
+  const dirs = async rel => (await readdir(path.join(root, rel), {withFileTypes: true}).catch(() => [])).filter(e => e.isDirectory()).map(e => `${rel}/${e.name}`);
+  for (const dir of await dirs('wp-content')) moves.push(...(/\/(plugins|themes)$/.test(dir) ? await dirs(dir) : [dir]));
+  if (await stat(path.join(root, 'wp-includes')).catch(() => null)) moves.push('wp-includes');
+  for (const rel of moves) {
+    const target = path.join(root, neutralPath('/' + rel));
+    await mkdir(path.dirname(target), {recursive: true});
+    await rename(path.join(root, rel), target);
+  }
+  await rm(path.join(root, 'wp-content'), {recursive: true, force: true});
+  for (const file of await filesIn(root)) {
+    if (!/\.(html|css|js|mjs|json|xml|svg|txt)$/.test(file)) continue;
+    const text = await readFile(file, 'utf8');
+    const out = rewriteLegacyPaths(text);
+    if (out !== text) await writeFile(file, out);
+  }
+  return moves.length;
+}
 
 export function cleanLegacyRuntime(html) {
   const markup = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');

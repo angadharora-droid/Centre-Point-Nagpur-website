@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createSiteServer, validateEnquiry } from './server.mjs';
+import { neutralPath, rewriteLegacyPaths } from './legacy-paths.mjs';
 
 async function start(t, options = {}) {
   const root = await mkdtemp(path.join(tmpdir(), 'cp-api-'));
@@ -32,6 +33,34 @@ test('retired WordPress and spam URLs answer 410 Gone', async t => {
   }
   assert.equal((await fetch(`${base}/authority/`)).status, 404);
   assert.equal((await fetch(`${base}/`)).status, 200);
+});
+
+test('old WordPress file paths redirect to their neutral home; existing files still serve', async t => {
+  const root = await mkdtemp(path.join(tmpdir(), 'cp-legacy-'));
+  await mkdir(path.join(root, 'wp-content/uploads'), { recursive: true });
+  await writeFile(path.join(root, 'wp-content/uploads/kept.jpg'), 'x');
+  const server = createSiteServer({ staticDir: root });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const moved = await fetch(`${base}/wp-content/plugins/elementor/a.js?ver=1`, { redirect: 'manual' });
+  assert.equal(moved.status, 301);
+  assert.equal(moved.headers.get('location'), neutralPath('/wp-content/plugins/elementor/a.js') + '?ver=1');
+  assert.match(moved.headers.get('location'), /^\/static\/[0-9a-f]{8}\/a\.js\?ver=1$/);
+  assert.equal((await fetch(`${base}/wp-content/uploads/gone.jpg`, { redirect: 'manual' })).headers.get('location'), '/media/gone.jpg');
+  assert.equal((await fetch(`${base}/wp-content/uploads/kept.jpg`)).status, 200); // dev server serves raw site/
+  assert.equal(await (await fetch(`${base}/ajax`)).text(), '0');
+});
+
+test('legacy path rewriting covers plain, JSON-escaped and URL-encoded references only', () => {
+  const plugin = neutralPath('/wp-content/plugins/elementor/x');
+  assert.equal(rewriteLegacyPaths('<img src="/wp-content/uploads/a.jpg" srcset="/wp-content/uploads/a.webp 300w">'), '<img src="/media/a.jpg" srcset="/media/a.webp 300w">');
+  assert.equal(rewriteLegacyPaths('{"assets":"https:\\/\\/centrepointnagpur.com\\/wp-content\\/plugins\\/elementor\\/x","ajaxurl":"\\/wp-admin\\/admin-ajax.php"}'),
+    `{"assets":"https:\\/\\/centrepointnagpur.com${plugin.replaceAll('/', '\\/')}","ajaxurl":"\\/ajax"}`);
+  assert.equal(rewriteLegacyPaths('url=https%3A%2F%2Fh.example%2Fwp-content%2Fuploads%2Fa.jpg'), 'url=https%3A%2F%2Fh.example%2Fmedia%2Fa.jpg');
+  assert.equal(rewriteLegacyPaths('url("/wp-includes/js/jquery.js")'), `url("${neutralPath('/wp-includes/js/jquery.js')}")`);
+  assert.equal(rewriteLegacyPaths('/wp-contentish/ and wp-content without slash'), '/wp-contentish/ and wp-content without slash');
+  assert.notEqual(neutralPath('/wp-content/plugins/x/'), neutralPath('/wp-content/themes/x/'));
 });
 
 test('static responses compress and carry caching headers', async t => {

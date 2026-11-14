@@ -6,6 +6,7 @@ import zlib from 'node:zlib';
 import { promisify } from 'node:util';
 import { ObjectId } from 'mongodb';
 import { getDb, isConfigured, dbHealth, closeDb } from './db.mjs';
+import { neutralPath } from './legacy-paths.mjs';
 
 const brotli = promisify(zlib.brotliCompress);
 const gzip = promisify(zlib.gzip);
@@ -228,6 +229,13 @@ async function serveStatic(req, res, root, pathname) {
     res.writeHead(200, headers);
     res.end(req.method === 'HEAD' ? undefined : body);
   } catch {
+    // The build moved WordPress folders; send old links to the file's new home.
+    const moved = neutralPath(pathname);
+    if (moved !== pathname) {
+      const query = new URL(req.url, 'http://localhost').search;
+      res.writeHead(301, { Location: moved + query, 'Cache-Control': 'public, max-age=86400' });
+      return res.end();
+    }
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end('<h1>Page not found</h1><a href="/">Return home</a>');
   }
@@ -242,7 +250,7 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
     // Legacy WordPress AJAX endpoint the captured plugins still ping. There is no
     // WordPress here; reply the way admin-ajax.php does for an unknown action ("0")
     // so those requests resolve quietly instead of 404-ing.
-    if (pathname === '/wp-admin/admin-ajax.php') {
+    if (pathname === '/ajax' || pathname === '/wp-admin/admin-ajax.php') {
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.setHeader('Cache-Control', 'no-store');
       if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
