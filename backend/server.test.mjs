@@ -25,7 +25,7 @@ test('serves static files and 404s unknown paths', async t => {
 
 test('retired WordPress and spam URLs answer 410 Gone', async t => {
   const base = await start(t);
-  for (const route of ['/roulette-with-bonus-free-spins-a-complete-guide/', '/hello-world/', '/hello-world/feed/', '/author/angadh-arora/', '/search-availability/', '/product/reservation/']) {
+  for (const route of ['/roulette-with-bonus-free-spins-a-complete-guide/', '/hello-world/', '/hello-world/feed/', '/author/angadh-arora/', '/search-availability/', '/product/reservation/', '/xmlrpc.php']) {
     const res = await fetch(base + route);
     assert.equal(res.status, 410, route);
     assert.equal(res.headers.get('x-robots-tag'), 'noindex');

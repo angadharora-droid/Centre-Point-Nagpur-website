@@ -15,6 +15,16 @@ void test('strips titles from documents pasted into the body, keeping the real t
  assert.ok(out.includes('<meta charset="UTF-8" />'));
 });
 
+void test('removes WordPress plugin banners, oEmbed links and emoji styles but keeps code and real styles', () => {
+ const html = '<head><!-- This site is optimized with the Yoast SEO plugin --><link rel="alternate" type="application/json+oembed" href="/wp-json/oembed/1.0/embed"><link rel="alternate" type="text/xml+oembed" href="/wp-json/oembed/1.0/embed?format=xml"><style id=\'wp-emoji-styles-inline-css\' type=\'text/css\'>img.wp-smiley{display:inline}</style><style id="kirki-inline-styles">body{color:red}</style><script>var s="<!-- keep -->";</script></head><body><!-- / Google Analytics by MonsterInsights --><p>Hi</p><textarea><!-- typed --></textarea></body>';
+ const out = cleanLegacyRuntime(html);
+ assert.ok(!/Yoast|MonsterInsights|oembed|wp-smiley/.test(out));
+ assert.ok(out.includes('<style id="kirki-inline-styles">body{color:red}</style>'));
+ assert.ok(out.includes('var s="<!-- keep -->";'));
+ assert.ok(out.includes('<textarea><!-- typed --></textarea>'));
+ assert.ok(out.includes('<p>Hi</p>'));
+});
+
 void test('removes obsolete generators and unused Pro runtime without removing styling', () => {
  const html = '<meta name="generator" content="WordPress"><link rel="stylesheet" href="/wp-content/plugins/elementor-pro/style.css"><script src="/wp-content/plugins/elementor-pro/assets/js/frontend.min.js"></script><script id="elementor-pro-frontend-js-before">var elementorProFrontendConfig={}</script>';
  const out=cleanLegacyRuntime(html);

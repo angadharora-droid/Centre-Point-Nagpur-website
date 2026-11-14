@@ -29,6 +29,10 @@ export function cleanLegacyRuntime(html) {
   html = html
     .replace(/<meta\b[^>]*\bname=["']generator["'][^>]*>/gi, '')
     .replace(/<link\b[^>]*\brel=["'](?:https:\/\/api\.w\.org\/|EditURI|wlwmanifest|shortlink|pingback)["'][^>]*>/gi, '')
+    // oEmbed discovery points at /wp-json/, which this copy doesn't serve.
+    .replace(/<link\b[^>]*\btype=["'](?:application\/json|text\/xml)\+oembed["'][^>]*>/gi, '')
+    // The emoji script is already gone; its stylesheet only styled the images it inserted.
+    .replace(/<style\b[^>]*\bid=["']wp-emoji-styles-inline-css["'][^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script\b[^>]*\btype=["']text\/template["'][^>]*\bid=["']tmpl-(?:variation|unavailable-variation)-template["'][^>]*>[\s\S]*?<\/script>/gi, '');
   // Editor-embedded widgets pull a full Font Awesome sheet from cdnjs. When the
   // theme already bundles Font Awesome locally it is a redundant render-blocking
@@ -43,7 +47,10 @@ export function cleanLegacyRuntime(html) {
   if (headEnd >= 0) {
     html = html.slice(0, headEnd) + html.slice(headEnd).replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, head => head.replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, ''));
   }
-  return html;
+  // Plugin banner comments ("optimized with the Yoast SEO plugin…", MonsterInsights,
+  // Site Kit, LayerSlider) only advertise the old WordPress stack to site scanners.
+  // Script, style and textarea contents are left alone: "<!--" there is code or text.
+  return html.replace(/(<(script|style|textarea)\b[^>]*>[\s\S]*?<\/\2>)|<!--[\s\S]*?-->/gi, (match, kept) => kept || '');
 }
 
 // Merge compatible classic scripts in their original deferred execution order.

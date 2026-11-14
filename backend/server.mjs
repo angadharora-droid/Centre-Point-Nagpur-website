@@ -16,9 +16,9 @@ const IMMUTABLE = /\.(css|js|mjs|woff2?|ttf|eot|otf|jpe?g|png|webp|avif|gif|svg|
 const NEVER_CACHE = new Set(['/runtime-config.js', '/api-client.js', '/forms.js']);
 // WordPress URLs retired from this copy: the injected gambling post, the default
 // "Hello world!" posts, the author archive that listed them, and the MotoPress /
-// WooCommerce booking and shop pages. 410 tells crawlers to drop them now instead
-// of re-checking a 404 for months.
-const GONE = /^\/(?:roulette-with-bonus-free-spins-a-complete-guide|hello-world(?:-2)?|author|search-availability|cart|checkout|my-account|shop|product)(?:\/|$)/;
+// WooCommerce booking and shop pages, and XML-RPC, which only login-guessing bots
+// call. 410 tells crawlers to drop them now instead of re-checking a 404 for months.
+const GONE = /^\/(?:roulette-with-bonus-free-spins-a-complete-guide|hello-world(?:-2)?|author|search-availability|cart|checkout|my-account|shop|product|xmlrpc\.php)(?:\/|$)/;
 
 // Cache compressed copies of text assets, keyed by path + mtime + encoding.
 const encodedCache = new Map();
@@ -242,7 +242,7 @@ export function createSiteServer({ staticDir = 'site', origins = process.env.FRO
     // Legacy WordPress AJAX endpoint the captured plugins still ping. There is no
     // WordPress here; reply the way admin-ajax.php does for an unknown action ("0")
     // so those requests resolve quietly instead of 404-ing.
-    if (pathname === '/wp-admin/admin-ajax.php' || pathname === '/xmlrpc.php') {
+    if (pathname === '/wp-admin/admin-ajax.php') {
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
       res.setHeader('Cache-Control', 'no-store');
       if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
